@@ -6,16 +6,22 @@ it is still fit to run as an always-on home server.
 Built for a Samsung Galaxy A16 5G that hosts a web dashboard and a Minecraft server from Termux,
 but it works on any phone running Android 11+.
 
+## Look
+
+The app is the server's front bezel. The verdict sits on a two-line character LCD (drawn dot by
+dot from a 5x7 character ROM): blue backlight when everything is fine, amber when something needs
+you. Under it, one inset bay per component with an LED, a printed label, the reading and a state
+word; a 7-day x 24-hour LED matrix shows what happened while nobody was looking. Warnings are
+hatched and worded, never colour alone. Light and dark themes follow the system.
+
 ## What it checks
 
-| Tab | Checks |
+| Screen | Checks |
 |---|---|
-| **Overview** | One verdict, every check listed worst-first |
-| **Battery** | Level, temperature, voltage, charge/draw current (mA, W), cycle count, estimated capacity vs design, 24 h charts |
-| **System** | Thermal throttling state and headroom, CPU clocks, RAM, storage, storage speed test (flash-wear baseline) |
-| **Network** | Active transport, Wi-Fi RSSI, cell dBm per radio, latency |
-| **Host** | Are your local services listening (configurable ports), on charger?, hours at ≥40 °C, 7-day temperature and uptime charts |
-| **Tests** | Screen pixels, touch grid, volume keys, loudspeaker, earpiece, microphone, vibration, flashlight, sensors |
+| **Status** | LCD verdict, 8 component bays (battery, power, thermal, storage, memory, network, services, logger) that open to cause + remedy, 7-day hourly LED matrix |
+| **Readings** | Battery level/temperature/voltage/current, cycles, capacity vs design, thermal state and headroom, CPU clocks, RAM, storage + speed test (flash-wear baseline), network and cell signal |
+| **History** | Watched ports (configurable), logging coverage, hours at ≥40 °C, 7-day temperature / services / charge charts, keep-alive settings |
+| **Tests** | Nine-step hardware procedure: screen pixels, touch grid, volume keys, loudspeaker, earpiece, microphone, vibration, flashlight, sensors |
 
 A background job samples every 15 minutes (7 days kept on-device) so the charts show how the
 phone copes with running 24/7. Nothing leaves the phone.
@@ -43,4 +49,5 @@ The APK lands in `app/build/outputs/apk/release/`. Prebuilt APKs are on the
 
 ## License
 
-MIT
+MIT. The bundled Barlow Condensed font is under the SIL Open Font License 1.1
+(`third_party/BarlowCondensed-OFL.txt`).

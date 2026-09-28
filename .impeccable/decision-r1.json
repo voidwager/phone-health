@@ -1,0 +1,65 @@
+{
+  "title": "Choose the visual world for Phone Health (re-roll 1)",
+  "question": "Fresh hand. The roll assigned the Rack Bezel. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Rack Bezel",
+      "kicker": "THE ROLL",
+      "lineage": "1U/2U rack-server front panels: status LCD, component LED grid, drive-bay caddies, colour-coded touch points",
+      "thesis": "Treat the phone as the server it is: the app is its front bezel, and the bezel's two-line status LCD states the verdict the way a real server does, backlight blue when healthy, amber on a fault.",
+      "palette": ["#C9CED3", "#2A2E33", "#2F6FDB", "#E8A317", "#2FA35A", "#9E3B2B"],
+      "materials": ["powder-coated bezel", "hex vent perforation", "backlit character LCD", "component LED grid", "drive-bay caddies with pull tabs", "printed service tag"],
+      "viewport": "Top: a two-line character LCD across the full width, blue-lit 'SYSTEM OK · SERVING 2/2', switching to amber 'CHECK BATTERY 46C' on a fault. Under it, the component grid: one labelled bay per subsystem (BATTERY, THERMAL, STORAGE, MEMORY, NETWORK, SERVICES, LOGGER), each with its LED and live reading. Below the grid, the 7-day activity panel: one LED row per day. Service tag at the foot. Bottom bar: Status / Readings / History / Tests as bay tabs.",
+      "risk": "Grey hardware chrome can tip into skeuomorphic costume. It has to stay flat and functional: the LED, the reading and the label do the work, and the bezel only frames them.",
+      "raised": [
+        {"from": "challenger-nixie-counter", "raise": "Fixed digit positions: every reading uses tabular digits at a fixed width and precision, so a value changing from 9.8 to 10.2 never shifts its row."},
+        {"from": "challenger-exposure-record", "raise": "State without colour: a bay in warning also carries a diagonal hatch across its LED window, so amber vs green survives colour-blindness and sunlight."},
+        {"from": "challenger-tensegrity", "raise": "Trace the load: every amber bay opens to its cause and its remedy, never a bare warning."},
+        {"from": "challenger-orizuru", "raise": "Numbered procedure: the hardware tests run as a service procedure, steps 01 to 09 in a strict margin column."},
+        {"from": "challenger-generative-identity", "raise": "One state drives everything: a single OK/CHECK/FAULT state sets the LCD backlight, the LEDs and the label ink together, never independently."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Status Page Ledger",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "public status pages self-hosters read every day (90-day uptime bars, incident log)",
+      "thesis": "Publish the phone's own status page to itself: one uptime bar per component, and an incident log written in plain sentences.",
+      "palette": ["#FFFFFF", "#1B1F24", "#2DA44E", "#D29922", "#CF222E"],
+      "materials": ["uptime tick bars", "incident timeline", "component rows"],
+      "viewport": "'All systems operational' banner, then one row per component with a 7-day tick bar, then 'Past incidents' in dated sentences.",
+      "risk": "The most familiar card here: it's what Uptime Kuma and every status page already look like."
+    },
+    {
+      "id": "challenger-viewfinder",
+      "label": "Camcorder Viewfinder",
+      "verdict": "competitive",
+      "lineage": "90s camcorder on-screen display",
+      "thesis": "The app is a viewfinder on the phone: readouts pinned to the four corners, zebra stripes crawl over any reading that's over its limit.",
+      "palette": ["#000000", "#FFFFFF", "#F2A900"],
+      "materials": ["segmented OSD caps", "zebra stripes", "corner focus brackets"],
+      "viewport": "Verdict centred inside focus brackets; battery, thermal, services and uptime readouts one per corner; zebra over anything hot or down.",
+      "case": "Zebra-on-over-limit is a crisp signal that doesn't rely on colour (holds clarity); nobody hosting a server sees themselves behind a camcorder (loses audience).",
+      "risk": "A recording-camera metaphor on a device that isn't filming anything.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-viewfinder-bracket-hud-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/pop-culture-shelf-viewfinder-bracket-hud.webp"
+    },
+    {"id": "challenger-nixie-counter", "label": "Nixie Lab Counter", "verdict": "declined", "lineage": "nixie-tube laboratory counters", "palette": ["#141414", "#FF7A1A"], "materials": ["glass tubes", "stacked numerals"], "case": "A reword of last round's cathode card; one orange can't carry severity.", "kept": "Fixed digit positions."},
+    {"id": "challenger-exposure-record", "label": "Darkroom Exposure Record", "verdict": "declined", "lineage": "darkroom printing records", "palette": ["#E9E9E6", "#6B6B6B", "#C2187A"], "materials": ["zone ramp", "hatch overlays"], "case": "Beautiful, but photographers' notation, not servers'.", "kept": "State without colour, via hatching."},
+    {"id": "challenger-tensegrity", "label": "Tensegrity Column", "verdict": "declined", "lineage": "kinetic sculpture", "palette": ["#D9D6D0", "#161616", "#C81E1E"], "materials": ["rods", "cord"], "case": "A force diagram with no forces to show.", "kept": "Trace every load to its counterforce."},
+    {"id": "challenger-orizuru", "label": "Orizuru Fold Sequence", "verdict": "declined", "lineage": "origami crane diagrams", "palette": ["#D7362B", "#F3EFE6", "#111111"], "materials": ["washi", "creases"], "case": "A sequence you learn, not a state you glance at.", "kept": "Numbered steps in a strict margin column."},
+    {"id": "challenger-generative-identity", "label": "Generative Identity", "verdict": "declined", "lineage": "parametric brand systems", "palette": ["#5B4BDB", "#F2F2F2"], "materials": ["seeded SVG mark"], "case": "Novelty identity for a tool that should look the same every morning.", "kept": "One state drives every surface in lockstep."}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A Material 3 device-care dashboard (Samsung Device care, Google's battery health screens), executed impeccably.",
+    "palette": ["#F7F9FC", "#1B1D21", "#3D6DE8"],
+    "materials": ["tonal surface cards", "circular score gauge", "navigation bar"],
+    "viewport": "A big circular health score, a row of tonal cards per subsystem, bottom navigation bar.",
+    "risk": "Indistinguishable from the phone's own Device care screen by design."
+  },
+  "steer": true
+}
