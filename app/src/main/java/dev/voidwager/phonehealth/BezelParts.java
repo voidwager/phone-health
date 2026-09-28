@@ -86,7 +86,7 @@ final class BezelParts {
 
     /** 24 dp line icons, 2 dp stroke, round caps — one drawn family for the navigation bar. */
     static final class NavIcon extends View {
-        static final int STATUS = 0, READINGS = 1, HISTORY = 2, TESTS = 3;
+        static final int STATUS = 0, READINGS = 1, HISTORY = 2, TESTS = 3, UPDATE = 4;
         private final Ui ui;
         private final int kind;
         private final Paint p = new Paint(Paint.ANTI_ALIAS_FLAG), dot = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -134,6 +134,20 @@ final class BezelParts {
                     dot.setStyle(Paint.Style.FILL);
                     for (int y = 0; y < 3; y++)
                         for (int x = 0; x < 3; x++) c.drawCircle(6 + x * 6, 6 + y * 6, 1.9f, dot);
+                    break;
+                case UPDATE: // an arrow dropping into a tray
+                    c.drawLine(12, 4, 12, 15, p);
+                    path.reset();
+                    path.moveTo(7.5f, 10.5f);
+                    path.lineTo(12, 15);
+                    path.lineTo(16.5f, 10.5f);
+                    c.drawPath(path, p);
+                    path.reset();
+                    path.moveTo(4, 15);
+                    path.lineTo(4, 20);
+                    path.lineTo(20, 20);
+                    path.lineTo(20, 15);
+                    c.drawPath(path, p);
                     break;
                 case TESTS: // a service procedure: clipboard with a tick
                     r.set(5, 4, 19, 21);

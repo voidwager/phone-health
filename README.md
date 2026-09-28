@@ -35,6 +35,16 @@ phone copes with running 24/7. Nothing leaves the phone.
 - One UI sleeps idle apps. Set Phone Health (and Termux, if you host from it) to *Unrestricted*
   battery use, or the logger stops.
 
+## Updating
+
+From 1.2 on, the app updates itself: when a newer release is published here, an **Update** bay
+appears on the Status screen. Tap it, then *Install update*; Android asks you to confirm and
+replaces the app in place, so history, test results and settings stay. You never need to uninstall.
+The check asks api.github.com at most every 6 hours while the app is open, and can be turned off
+under Readings › Software. The first time, Android asks you to allow Phone Health to install apps.
+
+Every release is signed with the same key; the app refuses an update signed with any other.
+
 ## Build
 
 Needs JDK 17–21 and the Android SDK (platform 36).
@@ -43,6 +53,10 @@ Needs JDK 17–21 and the Android SDK (platform 36).
 set JAVA_HOME=<path to JDK 21>
 gradlew assembleRelease
 ```
+
+Release signing reads `phsign.store`, `phsign.storePassword`, `phsign.alias` and `phsign.keyPassword`
+from `local.properties` (never committed). Without them the build signs with your machine's debug
+key, which can't update an install of the published releases.
 
 The APK lands in `app/build/outputs/apk/release/`. Prebuilt APKs are on the
 [Releases](../../releases) page.
