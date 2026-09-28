@@ -39,6 +39,8 @@ final class ChartView extends View {
         limit.setPathEffect(new DashPathEffect(new float[]{ui.px(4), ui.px(4)}, 0));
         label.setColor(ui.muted);
         label.setTextSize(ui.px(11));
+        label.setTypeface(ui.silk);
+        label.setFontFeatureSettings("tnum");
     }
 
     void set(List<History.Sample> samples, ToDoubleFunction<History.Sample> f, long windowMs,

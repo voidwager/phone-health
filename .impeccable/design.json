@@ -1,0 +1,756 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-28T00:00:00Z",
+  "title": "Design System: Phone Health",
+  "extensions": {
+    "colorMeta": {
+      "bezel-silver": {
+        "role": "neutral",
+        "displayName": "Bezel Silver",
+        "canonical": "#D7DCE0",
+        "tonalRamp": [
+          "#080C0E",
+          "#222629",
+          "#3E4346",
+          "#5D6265",
+          "#7E8387",
+          "#A1A6A9",
+          "#C5CACE",
+          "#EAEFF3"
+        ]
+      },
+      "bay-well-light": {
+        "role": "neutral",
+        "displayName": "Bay Well Light",
+        "canonical": "#C9CFD4",
+        "tonalRamp": [
+          "#080C0F",
+          "#212629",
+          "#3E4347",
+          "#5D6266",
+          "#7E8388",
+          "#A0A6AB",
+          "#C4CACF",
+          "#E9EFF4"
+        ]
+      },
+      "bay-edge-light": {
+        "role": "neutral",
+        "displayName": "Bay Edge Light",
+        "canonical": "#9FA7AE",
+        "tonalRamp": [
+          "#070C11",
+          "#20262B",
+          "#3C4349",
+          "#5B6269",
+          "#7C838A",
+          "#9EA6AD",
+          "#C2CAD2",
+          "#E7F0F7"
+        ]
+      },
+      "lip-highlight-light": {
+        "role": "neutral",
+        "displayName": "Lip Highlight Light",
+        "canonical": "#EEF1F3",
+        "tonalRamp": [
+          "#0A0B0D",
+          "#232527",
+          "#404244",
+          "#5F6263",
+          "#808384",
+          "#A3A5A7",
+          "#C7C9CB",
+          "#ECEFF1"
+        ]
+      },
+      "rule-light": {
+        "role": "neutral",
+        "displayName": "Rule Light",
+        "canonical": "#AEB5BC",
+        "tonalRamp": [
+          "#070C10",
+          "#20262B",
+          "#3D4349",
+          "#5C6268",
+          "#7D838A",
+          "#9FA6AD",
+          "#C3CAD1",
+          "#E8EFF7"
+        ]
+      },
+      "vent-hole-light": {
+        "role": "neutral",
+        "displayName": "Vent Hole Light",
+        "canonical": "#8E979F",
+        "tonalRamp": [
+          "#060C11",
+          "#1F262C",
+          "#3B434A",
+          "#5A626A",
+          "#7B848B",
+          "#9DA6AE",
+          "#C1CAD3",
+          "#E6F0F9"
+        ]
+      },
+      "ink-light": {
+        "role": "neutral",
+        "displayName": "Ink Light",
+        "canonical": "#1B1F24",
+        "tonalRamp": [
+          "#080B10",
+          "#21252B",
+          "#3E4248",
+          "#5D6268",
+          "#7E8389",
+          "#A0A6AC",
+          "#C4CAD1",
+          "#E9EFF6"
+        ]
+      },
+      "muted-light": {
+        "role": "neutral",
+        "displayName": "Muted Light",
+        "canonical": "#454E57",
+        "tonalRamp": [
+          "#050C13",
+          "#1E262E",
+          "#3A434C",
+          "#59626C",
+          "#7A848D",
+          "#9CA6B1",
+          "#C0CBD5",
+          "#E5F0FB"
+        ]
+      },
+      "touch-blue-light": {
+        "role": "primary",
+        "displayName": "Touch Blue Light",
+        "canonical": "#2159C4",
+        "tonalRamp": [
+          "#080055",
+          "#000879",
+          "#00359E",
+          "#2159C4",
+          "#427DEB",
+          "#64A1FF",
+          "#87C7FF",
+          "#ABEDFF"
+        ]
+      },
+      "touch-tonal-light": {
+        "role": "primary",
+        "displayName": "Touch Tonal Light",
+        "canonical": "#B9CCF2",
+        "tonalRamp": [
+          "#020923",
+          "#172441",
+          "#324161",
+          "#516182",
+          "#7182A5",
+          "#93A5CA",
+          "#B7C9EF",
+          "#DBEFFF"
+        ]
+      },
+      "led-ok-light": {
+        "role": "tertiary",
+        "displayName": "Led Ok Light",
+        "canonical": "#1C9A45",
+        "tonalRamp": [
+          "#001700",
+          "#003600",
+          "#005600",
+          "#007823",
+          "#1F9B46",
+          "#4EC069",
+          "#75E68C",
+          "#9CFFB1"
+        ]
+      },
+      "led-check-light": {
+        "role": "tertiary",
+        "displayName": "Led Check Light",
+        "canonical": "#D9930C",
+        "tonalRamp": [
+          "#290000",
+          "#4B0A00",
+          "#6D2E00",
+          "#914F00",
+          "#B57200",
+          "#DB9512",
+          "#FFB94A",
+          "#FFDF73"
+        ]
+      },
+      "led-fault-light": {
+        "role": "tertiary",
+        "displayName": "Led Fault Light",
+        "canonical": "#CC3326",
+        "tonalRamp": [
+          "#3B0000",
+          "#620000",
+          "#890000",
+          "#B12117",
+          "#D94B3C",
+          "#FF715F",
+          "#FF9682",
+          "#FFBCA6"
+        ]
+      },
+      "led-off-light": {
+        "role": "tertiary",
+        "displayName": "Led Off Light",
+        "canonical": "#7F878E",
+        "tonalRamp": [
+          "#060C11",
+          "#1F262C",
+          "#3C4349",
+          "#5B6269",
+          "#7B838A",
+          "#9EA6AD",
+          "#C2CAD2",
+          "#E7F0F8"
+        ]
+      },
+      "fault-text-light": {
+        "role": "tertiary",
+        "displayName": "Fault Text Light",
+        "canonical": "#9E2218",
+        "tonalRamp": [
+          "#370000",
+          "#5D0000",
+          "#830000",
+          "#AA2F23",
+          "#D15445",
+          "#FA7867",
+          "#FF9D8A",
+          "#FFC3AE"
+        ]
+      },
+      "bezel-graphite": {
+        "role": "neutral",
+        "displayName": "Bezel Graphite",
+        "canonical": "#23282D",
+        "tonalRamp": [
+          "#070C10",
+          "#21262B",
+          "#3D4348",
+          "#5C6268",
+          "#7D8389",
+          "#9FA6AC",
+          "#C3CAD1",
+          "#E9EFF6"
+        ]
+      },
+      "bay-well-dark": {
+        "role": "neutral",
+        "displayName": "Bay Well Dark",
+        "canonical": "#181B1F",
+        "tonalRamp": [
+          "#090B0F",
+          "#222529",
+          "#3F4247",
+          "#5E6266",
+          "#7F8388",
+          "#A1A5AB",
+          "#C5C9CF",
+          "#EBEFF5"
+        ]
+      },
+      "bay-edge-dark": {
+        "role": "neutral",
+        "displayName": "Bay Edge Dark",
+        "canonical": "#0C0E10",
+        "tonalRamp": [
+          "#090B0D",
+          "#232528",
+          "#404245",
+          "#5F6164",
+          "#808385",
+          "#A2A5A8",
+          "#C6C9CC",
+          "#ECEFF2"
+        ]
+      },
+      "lip-highlight-dark": {
+        "role": "neutral",
+        "displayName": "Lip Highlight Dark",
+        "canonical": "#3A4148",
+        "tonalRamp": [
+          "#060C11",
+          "#1F262C",
+          "#3C434A",
+          "#5B626A",
+          "#7B838B",
+          "#9EA6AE",
+          "#C2CAD3",
+          "#E7F0F9"
+        ]
+      },
+      "rule-dark": {
+        "role": "neutral",
+        "displayName": "Rule Dark",
+        "canonical": "#30363C",
+        "tonalRamp": [
+          "#070C11",
+          "#20262B",
+          "#3D4349",
+          "#5B6269",
+          "#7C838A",
+          "#9FA6AD",
+          "#C3CAD2",
+          "#E8EFF7"
+        ]
+      },
+      "vent-hole-dark": {
+        "role": "neutral",
+        "displayName": "Vent Hole Dark",
+        "canonical": "#0A0C0E",
+        "tonalRamp": [
+          "#090B0D",
+          "#232528",
+          "#404245",
+          "#5F6164",
+          "#808385",
+          "#A2A5A8",
+          "#C6C9CC",
+          "#ECEFF2"
+        ]
+      },
+      "ink-dark": {
+        "role": "neutral",
+        "displayName": "Ink Dark",
+        "canonical": "#E4E7EA",
+        "tonalRamp": [
+          "#090B0D",
+          "#232527",
+          "#404245",
+          "#5F6164",
+          "#808385",
+          "#A2A5A8",
+          "#C6C9CC",
+          "#ECEFF2"
+        ]
+      },
+      "muted-dark": {
+        "role": "neutral",
+        "displayName": "Muted Dark",
+        "canonical": "#A4ACB4",
+        "tonalRamp": [
+          "#070C11",
+          "#20262C",
+          "#3C434A",
+          "#5B6269",
+          "#7C838B",
+          "#9EA6AE",
+          "#C2CAD2",
+          "#E7F0F8"
+        ]
+      },
+      "touch-blue-dark": {
+        "role": "primary",
+        "displayName": "Touch Blue Dark",
+        "canonical": "#6F9BF0",
+        "tonalRamp": [
+          "#010042",
+          "#001A65",
+          "#173C88",
+          "#365DAD",
+          "#5680D2",
+          "#77A3F9",
+          "#9AC8FF",
+          "#BEEEFF"
+        ]
+      },
+      "touch-tonal-dark": {
+        "role": "primary",
+        "displayName": "Touch Tonal Dark",
+        "canonical": "#2A3E63",
+        "tonalRamp": [
+          "#000728",
+          "#112446",
+          "#2D4167",
+          "#4B6189",
+          "#6C83AC",
+          "#8DA6D1",
+          "#B1CAF7",
+          "#D5F0FF"
+        ]
+      },
+      "led-ok-dark": {
+        "role": "tertiary",
+        "displayName": "Led Ok Dark",
+        "canonical": "#34C46A",
+        "tonalRamp": [
+          "#001800",
+          "#003800",
+          "#005800",
+          "#007B23",
+          "#009E46",
+          "#32C369",
+          "#61E98C",
+          "#8AFFB1"
+        ]
+      },
+      "led-check-dark": {
+        "role": "tertiary",
+        "displayName": "Led Check Dark",
+        "canonical": "#F0B429",
+        "tonalRamp": [
+          "#270000",
+          "#471100",
+          "#693300",
+          "#8B5400",
+          "#AF7600",
+          "#D49A00",
+          "#FBBE38",
+          "#FFE466"
+        ]
+      },
+      "led-fault-dark": {
+        "role": "tertiary",
+        "displayName": "Led Fault Dark",
+        "canonical": "#F0584A",
+        "tonalRamp": [
+          "#3B0000",
+          "#620000",
+          "#890000",
+          "#B1211B",
+          "#D94B3F",
+          "#FF7161",
+          "#FF9684",
+          "#FFBCA8"
+        ]
+      },
+      "led-off-dark": {
+        "role": "tertiary",
+        "displayName": "Led Off Dark",
+        "canonical": "#4A5057",
+        "tonalRamp": [
+          "#070C11",
+          "#20262C",
+          "#3D4349",
+          "#5C6269",
+          "#7C838B",
+          "#9FA6AE",
+          "#C3CAD2",
+          "#E8EFF8"
+        ]
+      },
+      "fault-text-dark": {
+        "role": "tertiary",
+        "displayName": "Fault Text Dark",
+        "canonical": "#F0584A",
+        "tonalRamp": [
+          "#3B0000",
+          "#620000",
+          "#890000",
+          "#B1211B",
+          "#D94B3F",
+          "#FF7161",
+          "#FF9684",
+          "#FFBCA8"
+        ]
+      },
+      "on-touch": {
+        "role": "primary",
+        "displayName": "On Touch",
+        "canonical": "#FFFFFF",
+        "tonalRamp": [
+          "#0B0B0B",
+          "#252525",
+          "#424242",
+          "#616161",
+          "#828282",
+          "#A5A5A5",
+          "#C9C9C9",
+          "#EEEEEE"
+        ]
+      },
+      "lcd-frame": {
+        "role": "secondary",
+        "displayName": "Lcd Frame",
+        "canonical": "#101214",
+        "tonalRamp": [
+          "#090B0D",
+          "#232527",
+          "#404245",
+          "#5F6164",
+          "#808385",
+          "#A2A5A8",
+          "#C6C9CC",
+          "#ECEFF2"
+        ]
+      },
+      "lcd-blue-glass": {
+        "role": "secondary",
+        "displayName": "Lcd Blue Glass",
+        "canonical": "#2F63C9",
+        "tonalRamp": [
+          "#060051",
+          "#000D74",
+          "#043699",
+          "#275ABF",
+          "#477DE6",
+          "#69A2FF",
+          "#8BC7FF",
+          "#B0EDFF"
+        ]
+      },
+      "lcd-blue-pixel-on": {
+        "role": "secondary",
+        "displayName": "Lcd Blue Pixel On",
+        "canonical": "#EAF2FF",
+        "tonalRamp": [
+          "#070B13",
+          "#20252F",
+          "#3C424D",
+          "#5B626D",
+          "#7C838E",
+          "#9EA6B2",
+          "#C2CAD6",
+          "#E7EFFC"
+        ]
+      },
+      "lcd-blue-pixel-off": {
+        "role": "secondary",
+        "displayName": "Lcd Blue Pixel Off",
+        "canonical": "#3A6ED4",
+        "tonalRamp": [
+          "#060050",
+          "#000E74",
+          "#053798",
+          "#285ABE",
+          "#487DE5",
+          "#6AA2FF",
+          "#8CC7FF",
+          "#B0EDFF"
+        ]
+      },
+      "lcd-amber-glass": {
+        "role": "secondary",
+        "displayName": "Lcd Amber Glass",
+        "canonical": "#E9A21C",
+        "tonalRamp": [
+          "#2A0000",
+          "#4B0900",
+          "#6E2E00",
+          "#914F00",
+          "#B67200",
+          "#DB9500",
+          "#FFBA40",
+          "#FFDF6B"
+        ]
+      },
+      "lcd-amber-pixel-on": {
+        "role": "secondary",
+        "displayName": "Lcd Amber Pixel On",
+        "canonical": "#2B1B02",
+        "tonalRamp": [
+          "#160700",
+          "#322207",
+          "#503F25",
+          "#715E43",
+          "#937F63",
+          "#B6A285",
+          "#DBC6A8",
+          "#FFEBCC"
+        ]
+      },
+      "lcd-amber-pixel-off": {
+        "role": "secondary",
+        "displayName": "Lcd Amber Pixel Off",
+        "canonical": "#EDAB33",
+        "tonalRamp": [
+          "#280000",
+          "#490E00",
+          "#6B3000",
+          "#8E5100",
+          "#B27400",
+          "#D8970D",
+          "#FEBB48",
+          "#FFE171"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "LCD 5x7",
+        "purpose": "LCD verdict only; drawn dot matrix, 20 columns."
+      },
+      "headline": {
+        "displayName": "Silkscreen Headline",
+        "purpose": "App name in the header."
+      },
+      "title": {
+        "displayName": "Bay Reading",
+        "purpose": "Tabular reading in each bay."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Row labels and values, notes."
+      },
+      "body-small": {
+        "displayName": "Body Small",
+        "purpose": "Bay detail, hints, legend."
+      },
+      "label": {
+        "displayName": "Silkscreen Label",
+        "purpose": "Section labels, bay labels, state words, button labels."
+      },
+      "label-small": {
+        "displayName": "Silkscreen Small",
+        "purpose": "Row state words, chart and matrix axes."
+      }
+    },
+    "shadows": [
+      {
+        "name": "well-top-shade",
+        "value": "inset 0 2px 0 var(--bay-edge)",
+        "purpose": "Shadowed top edge of an inset bay (layered drawable, not a shadow)."
+      },
+      {
+        "name": "well-bottom-lip",
+        "value": "0 1px 0 var(--lip-highlight)",
+        "purpose": "Lit bottom lip of an inset bay."
+      }
+    ],
+    "motion": [
+      {
+        "name": "tab-fade-through",
+        "value": "200ms, alpha 0->1, translateY 8dp->0, DecelerateInterpolator(2)",
+        "purpose": "Switching bottom-nav destinations; skipped when animations are off."
+      },
+      {
+        "name": "lcd-tick",
+        "value": "2500ms",
+        "purpose": "LCD line 2 steps through values; FAULT prefix inverts on alternate ticks."
+      },
+      {
+        "name": "snack-fade",
+        "value": "150ms alpha, 4000ms hold",
+        "purpose": "Transient message fade-in."
+      }
+    ],
+    "breakpoints": []
+  },
+  "components": [
+    {
+      "name": "Touch Button",
+      "kind": "button",
+      "refersTo": "button-touch",
+      "description": "Outlined blue touch point: every pressable action.",
+      "html": "<button class=\"ds-touch\">OPEN READINGS</button>",
+      "css": ".ds-touch{background:transparent;color:#2159C4;border:1.5px solid #2159C4;border-radius:6px;height:48px;padding:0 16px;font:600 15px 'Barlow Condensed',sans-serif;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:background .15s}.ds-touch:hover{background:rgba(33,89,196,.08)}.ds-touch:active{background:rgba(33,89,196,.22)}.ds-touch:focus-visible{outline:2px solid #2159C4;outline-offset:2px}"
+    },
+    {
+      "name": "LCD (fault)",
+      "kind": "custom",
+      "refersTo": "lcd-needs-you",
+      "description": "Two-line 20-column dot-matrix verdict; amber backlight when anything needs you.",
+      "html": "<div class=\"ds-lcd\"><div class=\"ds-lcd-glass\"><span class=\"ds-lcd-inv\">FAULT:</span> SERVICES<br>0/2 PORTS UP</div></div>",
+      "css": ".ds-lcd{background:#101214;border-radius:6px;padding:6px;max-width:360px}.ds-lcd-glass{background:#E9A21C;color:#2B1B02;border-radius:3px;padding:10px 12px;font:700 18px/1.3 'Courier New',monospace;letter-spacing:.12em;text-transform:uppercase}.ds-lcd-inv{background:#2B1B02;color:#E9A21C}"
+    },
+    {
+      "name": "LCD (healthy)",
+      "kind": "custom",
+      "refersTo": "lcd-healthy",
+      "description": "Blue backlight: nothing is CHECK or FAULT.",
+      "html": "<div class=\"ds-lcd2\"><div class=\"ds-lcd2-glass\">SYSTEM OK<br>BATT 25C  100%</div></div>",
+      "css": ".ds-lcd2{background:#101214;border-radius:6px;padding:6px;max-width:360px}.ds-lcd2-glass{background:#2F63C9;color:#EAF2FF;border-radius:3px;padding:10px 12px;font:700 18px/1.3 'Courier New',monospace;letter-spacing:.12em}"
+    },
+    {
+      "name": "Bay",
+      "kind": "card",
+      "refersTo": "bay",
+      "description": "Inset drive-caddy bay: LED, silkscreen label, chevron, tabular reading, detail and state word.",
+      "html": "<button class=\"ds-bay\"><span class=\"ds-bay-top\"><span class=\"ds-led ds-led-bad\"></span><span class=\"ds-bay-label\">SERVICES</span><svg width=\"20\" height=\"20\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"#454E57\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M7 9.5l5 5 5-5\"/></svg></span><span class=\"ds-bay-reading\">0/2</span><span class=\"ds-bay-foot\"><span>ports up</span><b class=\"ds-bay-word\">FAULT</b></span></button>",
+      "css": ".ds-bay{display:flex;flex-direction:column;gap:6px;width:180px;min-height:100px;text-align:left;background:#C9CFD4;border:0;border-radius:6px;padding:12px 8px 12px 12px;box-shadow:inset 0 2px 0 #9FA7AE,0 1px 0 #EEF1F3;cursor:pointer}.ds-bay:focus-visible{outline:2px solid #2159C4}.ds-bay:hover{background:#C3C9CE}.ds-bay-top{display:flex;align-items:center;gap:8px}.ds-bay-label{flex:1;font:600 14px 'Barlow Condensed',sans-serif;letter-spacing:.07em;color:#454E57}.ds-bay-reading{font:500 22px Roboto,sans-serif;font-variant-numeric:tabular-nums;color:#1B1F24}.ds-bay-foot{display:flex;justify-content:space-between;font:400 13px Roboto,sans-serif;color:#454E57}.ds-bay-word{font:600 13px 'Barlow Condensed',sans-serif;letter-spacing:.07em;color:#9E2218}.ds-led{width:12px;height:12px;border-radius:50%;flex:none;box-shadow:inset 0 0 0 1px rgba(0,0,0,.25)}.ds-led-bad{background:repeating-linear-gradient(-45deg,#CC3326 0 2.5px,rgba(0,0,0,.45) 2.5px 4px)}"
+    },
+    {
+      "name": "Panel Row",
+      "kind": "custom",
+      "refersTo": "row",
+      "description": "LED, label, right-aligned tabular value, state word under it for CHECK/FAULT.",
+      "html": "<div class=\"ds-panel\"><div class=\"ds-row\"><span class=\"ds-rled\"></span><span class=\"ds-rlabel\">Temperature</span><span class=\"ds-rval\">41.0 °C · warm<br><b>CHECK</b></span></div></div>",
+      "css": ".ds-panel{background:#C9CFD4;border-radius:6px;padding:6px 14px;box-shadow:inset 0 2px 0 #9FA7AE,0 1px 0 #EEF1F3;max-width:360px}.ds-row{display:flex;align-items:center;min-height:44px;padding:8px 0;gap:12px}.ds-rled{width:12px;height:12px;border-radius:50%;background:repeating-linear-gradient(-45deg,#D9930C 0 3.5px,rgba(0,0,0,.45) 3.5px 5px)}.ds-rlabel{flex:1;font:400 15px Roboto,sans-serif;color:#1B1F24}.ds-rval{text-align:right;font:500 15px Roboto,sans-serif;font-variant-numeric:tabular-nums;color:#1B1F24}.ds-rval b{font:600 11px 'Barlow Condensed',sans-serif;letter-spacing:.07em}"
+    },
+    {
+      "name": "Bottom Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Four equal destinations; active gets the tonal pill.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-i ds-on\" href=\"#\"><span class=\"ds-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><rect x=\"3\" y=\"6\" width=\"18\" height=\"12\" rx=\"2\"/><path d=\"M7 10.5h10M7 14h6\"/></svg></span>Status</a><a class=\"ds-nav-i\" href=\"#\"><span class=\"ds-pill\"><svg width=\"24\" height=\"24\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M4.5 11a8.9 8.9 0 0 1 15 0\"/><path d=\"M12 14l4.5-5\"/></svg></span>Readings</a></nav>",
+      "css": ".ds-nav{display:flex;background:#D7DCE0;border-top:1px solid #AEB5BC}.ds-nav-i{flex:1;height:80px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font:500 12px Roboto,sans-serif;color:#454E57;text-decoration:none}.ds-pill{width:64px;height:32px;border-radius:16px;display:grid;place-items:center}.ds-on{color:#1B1F24}.ds-on .ds-pill{background:#B9CCF2}.ds-nav-i:hover .ds-pill{background:rgba(0,0,0,.06)}.ds-nav-i:focus-visible{outline:2px solid #2159C4}"
+    },
+    {
+      "name": "Vent Strip",
+      "kind": "custom",
+      "refersTo": "vent",
+      "description": "Hex perforation band, the bezel's one purely material element.",
+      "html": "<div class=\"ds-vent\"></div>",
+      "css": ".ds-vent{height:22px;max-width:360px;background-color:#D7DCE0;background-image:radial-gradient(circle,#8E979F 3px,transparent 3.3px),radial-gradient(circle,#8E979F 3px,transparent 3.3px);background-size:13.4px 11.8px;background-position:0 0,6.7px 5.9px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Rack Bezel",
+    "overview": "The phone is a server, so the app is its front bezel. Every screen is a powder-coated faceplate (silver on a lit shelf, graphite in a dark room) with wells pressed into it. The verdict lives on a two-line, 20-column backlit character LCD, drawn dot by dot from an HD44780-style 5x7 ROM, the way rack servers report health. Below it, component bays each carry an LED lens, a silkscreened label, a tabular reading and, when not OK, a state word.\n\nDensity is moderate and practical: a 2x4 bay grid in the first viewport, then printed section labels over inset panels of rows. Colour is almost entirely neutral metal; hue belongs to three things only: the LCD backlight, LED lenses, and blue touch points. One OK / CHECK / FAULT state per component, rolled up by worst-wins, drives the LCD, the LEDs and the words together.",
+    "keyCharacteristics": [
+      "Two-line dot-matrix LCD as the single verdict surface; blue backlight = all OK, amber = something needs you.",
+      "Inset bays (darker well, 2dp shadowed top, 1dp lit bottom lip), never raised cards.",
+      "Round LED lenses, diagonally hatched for CHECK (sparse) and FAULT (dense).",
+      "Silkscreen condensed caps for everything printed on the metal; system sans for prose and readings.",
+      "Blue marks what you can press, outlined, never filled.",
+      "Hex-perforated vent strip as the one purely material band."
+    ],
+    "rules": [
+      {
+        "name": "The Lamp-Only Rule",
+        "body": "State colours (LED green/amber/red) appear only as LED lenses, matrix cells and the one dashed threshold line. Text states use ink (CHECK) or fault-text (FAULT); surfaces never take a state tint.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink-Trace Rule",
+        "body": "Chart lines are drawn in ink, never in a state colour. The threshold is the only coloured element on a chart.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Finish Rule",
+        "body": "Light and dark are the same bezel in two powder coats; every neutral token has a paired value and the LCD, LED hues and structure do not change between them.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Reading Rule",
+        "body": "Every number that changes in place uses `tnum` so rows never shift as values tick.",
+        "section": "typography"
+      },
+      {
+        "name": "The Silkscreen Rule",
+        "body": "Anything printed on the metal (section names, bay labels, state words, button labels) is uppercase Barlow at 0.07em tracking. Sentences are never silkscreened.",
+        "section": "typography"
+      },
+      {
+        "name": "The Pressed-In Rule",
+        "body": "Groups are wells, never raised cards. Depth comes from the two-band lip, never from elevation or blur.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do drive LCD backlight, LEDs and state words from one worst-wins OK / CHECK / FAULT state.",
+      "Do pair every CHECK or FAULT lens with a hatch and a printed word; state is never colour alone.",
+      "Do mark every pressable thing with touch-blue: outline for buttons, 2dp ring for an open bay.",
+      "Do use tabular figures for every live reading, axis label and matrix label.",
+      "Do keep 48dp touch targets and sp type so system font scale reflows the bays.",
+      "Do gate every motion (tab fade, FAULT flash, snackbar fade) on system animations being enabled."
+    ],
+    "donts": [
+      "Don't raise surfaces with drop shadows or elevation; bays are pressed in.",
+      "Don't tint text, fills or chart lines with LED colours; lamps and the threshold only.",
+      "Don't fill touch points solid blue; the outline marks them without shouting.",
+      "Don't put more than 20 characters on an LCD line or repeat line 1's label on line 2.",
+      "Don't set sentences in silkscreen caps, or set silkscreen labels in the body sans."
+    ]
+  }
+}

@@ -1,6 +1,24 @@
 package dev.voidwager.phonehealth;
 
+/*
+ * THESIS: The phone is a server, so the app is its front bezel. The verdict lives on a two-line
+ *   character LCD, the way rack servers report health, not in a score ring or a stack of cards.
+ * OWN-WORLD: Powder-coated bezel (silver on a lit shelf, graphite in the dark). Inset bays with
+ *   sheet-metal radii. Round LED lenses, hatched when not OK. A backlit 5x7 dot-matrix LCD, blue
+ *   when healthy and amber on a fault. Hex vent perforation. Silkscreen condensed caps. Blue touch
+ *   points for everything you press.
+ * STORY: Glance: blue LCD means SYSTEM OK. If amber, the LCD names the fault. Tap the amber bay to
+ *   read its cause and remedy. The 7-day LED matrix shows what happened while nobody was looking.
+ * FIRST VIEWPORT: vent strip, then a full-width LCD (line 1 verdict, line 2 stepping readings),
+ *   then a 2x4 grid of component bays (LED, label, tabular reading, state word). Bottom navigation:
+ *   Status / Readings / History / Tests.
+ * FORM: Rack Bezel, grounded candidate #3 of 7 (re-roll 1), seed key 48bdb416.
+ * FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the
+ *   verdict, and DESIGN.md
+ */
+
 import android.Manifest;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.ActivityManager;
 import android.app.AlertDialog;
@@ -9,6 +27,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Insets;
 import android.net.Uri;
+import android.os.BatteryManager;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -18,15 +37,18 @@ import android.provider.Settings;
 import android.text.InputType;
 import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.WindowInsets;
 import android.view.WindowInsetsController;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.Button;
 import android.widget.EditText;
-import android.widget.HorizontalScrollView;
+import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
-import android.widget.Toast;
+import android.window.OnBackInvokedCallback;
+import android.window.OnBackInvokedDispatcher;
 
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -38,8 +60,8 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     static final String PREFS = "ph";
-    private static final String[] TABS = {"Overview", "Battery", "System", "Network", "Host", "Tests"};
-    private static final int OVERVIEW = 0, BATTERY = 1, SYSTEM = 2, NETWORK = 3, HOST = 4, TESTS = 5;
+    private static final int STATUS = 0, READINGS = 1, HISTORY = 2, TESTS = 3;
+    private static final String[] TABS = {"Status", "Readings", "History", "Tests"};
     private static final long DAY = 24 * 3600 * 1000L;
 
     private static final String[] TEST_IDS = {"pixels", "touch", "keys", "speaker", "earpiece", "mic",
@@ -47,22 +69,28 @@ public class MainActivity extends Activity {
     private static final String[] TEST_NAMES = {"Screen pixels", "Touch grid", "Volume buttons", "Loudspeaker",
             "Earpiece", "Microphone", "Vibration motor", "Flashlight", "Motion & light sensors"};
     private static final String[] TEST_HINTS = {
-            "Six solid colours: spot dead or stuck pixels and burn-in",
-            "Paint every cell to find dead zones in the digitiser",
-            "Press volume up, then volume down",
-            "2 s sweep, 300 Hz to 3 kHz. Listen for rattle or dropouts",
-            "Same sweep through the call speaker. Hold the phone to your ear",
-            "Clap or talk for 3 s. Passes on its own above -40 dBFS",
-            "Two firm pulses",
-            "Torch on for 1.5 s",
-            "Listens for 3 s. Tilt the phone and wave a hand over the top edge while it runs"};
+            "Six solid colours. Look for dead or stuck pixels and burn-in.",
+            "Paint every cell to find dead zones in the digitiser.",
+            "Press volume up, then volume down.",
+            "2 s sweep, 300 Hz to 3 kHz. Listen for rattle or dropouts.",
+            "Same sweep through the call speaker. Hold the phone to your ear.",
+            "Clap or talk for 3 s. Passes on its own above -40 dBFS.",
+            "Two firm pulses.",
+            "Torch on for 1.5 s.",
+            "Listens for 3 s. Tilt the phone and wave a hand over the top edge while it runs."};
     private static final int REQ_MIC = 100;
 
     private Ui ui;
     private SharedPreferences prefs;
-    private LinearLayout tabBar, content;
-    private int tab = OVERVIEW;
+    private LinearLayout content;
+    private ScrollView scroll;
+    private final List<View[]> navItems = new ArrayList<>();
+    private TextView snack;
+    private int tab = STATUS;
     private EditText portsEdit;
+    private String openBay;
+    private int lcdPhase;
+    private OnBackInvokedCallback backToStatus;
 
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ExecutorService io = Executors.newSingleThreadExecutor();
@@ -74,9 +102,10 @@ public class MainActivity extends Activity {
     private final Runnable tick = new Runnable() {
         @Override
         public void run() {
+            lcdPhase++;
             boolean typing = portsEdit != null && portsEdit.hasFocus();
             if (tab != TESTS && !typing) render();
-            main.postDelayed(this, 2000);
+            main.postDelayed(this, 2500);
         }
     };
 
@@ -87,62 +116,119 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         ui = new Ui(this);
         prefs = getSharedPreferences(PREFS, 0);
-        if (b != null) tab = b.getInt("tab", OVERVIEW);
+        if (b != null) {
+            tab = b.getInt("tab", STATUS);
+            openBay = b.getString("bay");
+        }
 
-        LinearLayout root = new LinearLayout(this);
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setBackgroundColor(ui.bg);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(ui.bezel);
+        LinearLayout column = new LinearLayout(this);
+        column.setOrientation(LinearLayout.VERTICAL);
+        root.addView(column, new FrameLayout.LayoutParams(-1, -1));
 
         LinearLayout head = new LinearLayout(this);
-        head.setOrientation(LinearLayout.VERTICAL);
-        head.setPadding(ui.px(20), ui.px(14), ui.px(20), ui.px(6));
-        head.addView(ui.text("Phone Health", 26, ui.text, true));
-        head.addView(ui.text(Build.MANUFACTURER + " " + Build.MODEL + "  ·  Android " + Build.VERSION.RELEASE,
-                13, ui.muted, false));
-        root.addView(head);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        head.setPadding(ui.px(20), ui.px(12), ui.px(20), ui.px(10));
+        TextView name = ui.silk("Phone Health", 17, ui.ink);
+        name.setSingleLine(true);
+        head.addView(name);
+        TextView model = ui.silk(Build.MODEL + " · Android " + Build.VERSION.RELEASE, 11, ui.muted);
+        model.setSingleLine(true);
+        model.setEllipsize(android.text.TextUtils.TruncateAt.START);
+        model.setGravity(Gravity.END);
+        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(0, -2, 1f);
+        ml.leftMargin = ui.px(12);
+        head.addView(model, ml);
+        column.addView(head);
 
-        HorizontalScrollView hs = new HorizontalScrollView(this);
-        hs.setHorizontalScrollBarEnabled(false);
-        tabBar = new LinearLayout(this);
-        tabBar.setPadding(ui.px(14), ui.px(6), ui.px(14), ui.px(8));
-        for (int i = 0; i < TABS.length; i++) {
-            final int t = i;
-            TextView chip = ui.text(TABS[i], 14, ui.text, true);
-            chip.setPadding(ui.px(14), ui.px(8), ui.px(14), ui.px(8));
-            chip.setOnClickListener(v -> { tab = t; render(); });
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, -2);
-            lp.rightMargin = ui.px(6);
-            tabBar.addView(chip, lp);
-        }
-        hs.addView(tabBar);
-        root.addView(hs);
-
-        ScrollView scroll = new ScrollView(this);
+        scroll = new ScrollView(this);
+        scroll.setClipToPadding(false);
         content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(ui.px(14), ui.px(4), ui.px(14), ui.px(24));
+        content.setPadding(ui.px(16), 0, ui.px(16), ui.px(28));
         scroll.addView(content);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
+        column.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1f));
 
-        root.setOnApplyWindowInsetsListener((v, in) -> {
+        View navRule = new View(this);
+        navRule.setBackgroundColor(ui.rule);
+        column.addView(navRule, new LinearLayout.LayoutParams(-1, Math.max(1, ui.px(1))));
+        LinearLayout nav = new LinearLayout(this);
+        nav.setBackgroundColor(ui.bezel);
+        for (int i = 0; i < TABS.length; i++) nav.addView(navItem(i), new LinearLayout.LayoutParams(0, ui.px(80), 1f));
+        column.addView(nav);
+
+        snack = ui.text("", 14, ui.bay, false);
+        snack.setBackground(ui.rounded(ui.ink, 6));
+        snack.setPadding(ui.px(16), ui.px(14), ui.px(16), ui.px(14));
+        snack.setVisibility(View.GONE);
+        snack.setElevation(ui.px(6));
+        FrameLayout.LayoutParams sl = new FrameLayout.LayoutParams(-1, -2, Gravity.BOTTOM);
+        sl.setMargins(ui.px(16), 0, ui.px(16), ui.px(96));
+        root.addView(snack, sl);
+
+        column.setOnApplyWindowInsetsListener((v, in) -> {
             Insets i = in.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
-            v.setPadding(i.left, i.top, i.right, i.bottom);
+            head.setPadding(ui.px(20) + i.left, ui.px(12) + i.top, ui.px(20) + i.right, ui.px(10));
+            nav.setPadding(i.left, 0, i.right, i.bottom);
+            ((LinearLayout.LayoutParams) nav.getChildAt(0).getLayoutParams()).height = ui.px(80);
+            content.setPadding(ui.px(16) + i.left, 0, ui.px(16) + i.right, ui.px(28));
+            FrameLayout.LayoutParams p = (FrameLayout.LayoutParams) snack.getLayoutParams();
+            p.bottomMargin = ui.px(92) + i.bottom;
+            snack.setLayoutParams(p);
             return WindowInsets.CONSUMED;
         });
         setContentView(root);
         WindowInsetsController wic = getWindow().getInsetsController();
-        if (wic != null && ui.bg != 0xFF0F1115) {
+        if (wic != null && !ui.night) {
             int light = WindowInsetsController.APPEARANCE_LIGHT_STATUS_BARS
                     | WindowInsetsController.APPEARANCE_LIGHT_NAVIGATION_BARS;
             wic.setSystemBarsAppearance(light, light);
         }
+        if (Build.VERSION.SDK_INT >= 33) backToStatus = () -> switchTab(STATUS);
         SampleJob.schedule(this);
+    }
+
+    private View navItem(int i) {
+        LinearLayout item = new LinearLayout(this);
+        item.setOrientation(LinearLayout.VERTICAL);
+        item.setGravity(Gravity.CENTER);
+        item.setBackground(ui.pressable(ui.rounded(0, 0)));
+        FrameLayout pill = new FrameLayout(this);
+        BezelParts.NavIcon icon = new BezelParts.NavIcon(this, ui, i);
+        pill.addView(icon, new FrameLayout.LayoutParams(ui.px(24), ui.px(24), Gravity.CENTER));
+        item.addView(pill, new LinearLayout.LayoutParams(ui.px(64), ui.px(32)));
+        TextView label = ui.text(TABS[i], 12, ui.muted, true);
+        label.setPadding(0, ui.px(4), 0, 0);
+        label.setGravity(Gravity.CENTER_HORIZONTAL);
+        item.addView(label, new LinearLayout.LayoutParams(-2, -2));
+        item.setContentDescription(TABS[i]);
+        item.setOnClickListener(v -> switchTab(i));
+        navItems.add(new View[]{pill, icon, label, item});
+        return item;
+    }
+
+    private void switchTab(int t) {
+        if (t == tab) {
+            scroll.smoothScrollTo(0, 0);
+            return;
+        }
+        tab = t;
+        scroll.scrollTo(0, 0);
+        render();
+        if (ValueAnimator.areAnimatorsEnabled()) { // fade-through between destinations
+            content.setAlpha(0f);
+            content.setTranslationY(ui.px(8));
+            content.animate().alpha(1f).translationY(0).setDuration(200)
+                    .setInterpolator(new DecelerateInterpolator(2f)).start();
+        }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle out) {
         super.onSaveInstanceState(out);
         out.putInt("tab", tab);
+        out.putString("bay", openBay);
     }
 
     @Override
@@ -150,7 +236,7 @@ public class MainActivity extends Activity {
         super.onResume();
         io.execute(() -> {
             List<History.Sample> h = History.load(this);
-            // Seed the log on open so the charts aren't empty for the first 15 minutes.
+            // Seed the log on open so the panels aren't empty for the first 15 minutes.
             if (h.isEmpty() || System.currentTimeMillis() - h.get(h.size() - 1).t > 10 * 60 * 1000L) {
                 History.append(this, History.capture(this));
                 h = History.load(this);
@@ -159,7 +245,7 @@ public class MainActivity extends Activity {
             main.post(() -> { history = fh; render(); });
         });
         render();
-        main.postDelayed(tick, 2000);
+        main.postDelayed(tick, 2500);
     }
 
     @Override
@@ -177,21 +263,26 @@ public class MainActivity extends Activity {
     // ================================================================ rendering
 
     private void render() {
-        for (int i = 0; i < tabBar.getChildCount(); i++) {
-            TextView chip = (TextView) tabBar.getChildAt(i);
+        for (int i = 0; i < navItems.size(); i++) {
+            View[] v = navItems.get(i);
             boolean on = i == tab;
-            chip.setBackground(ui.rounded(on ? ui.accent : ui.card, 18));
-            chip.setTextColor(on ? 0xFFFFFFFF : ui.text);
+            v[0].setBackground(on ? ui.rounded(ui.touchTonal, 16) : null);
+            ((BezelParts.NavIcon) v[1]).setColor(on ? ui.ink : ui.muted);
+            ((TextView) v[2]).setTextColor(on ? ui.ink : ui.muted);
+            v[3].setSelected(on);
+        }
+        if (Build.VERSION.SDK_INT >= 33 && backToStatus != null) {
+            OnBackInvokedDispatcher d = getOnBackInvokedDispatcher();
+            d.unregisterOnBackInvokedCallback(backToStatus);
+            if (tab != STATUS) d.registerOnBackInvokedCallback(OnBackInvokedDispatcher.PRIORITY_DEFAULT, backToStatus);
         }
         content.removeAllViews();
         portsEdit = null;
         refreshAsync();
         switch (tab) {
-            case OVERVIEW: overview(); break;
-            case BATTERY: batteryTab(); break;
-            case SYSTEM: systemTab(); break;
-            case NETWORK: networkTab(); break;
-            case HOST: hostTab(); break;
+            case STATUS: statusTab(); break;
+            case READINGS: readingsTab(); break;
+            case HISTORY: historyTab(); break;
             case TESTS: testsTab(); break;
         }
     }
@@ -206,122 +297,386 @@ public class MainActivity extends Activity {
             latencyMs = Probes.tcpConnectMs("1.1.1.1", 443, 1500);
             main.post(() -> {
                 boolean typing = portsEdit != null && portsEdit.hasFocus();
-                if ((tab == OVERVIEW || tab == NETWORK || tab == HOST) && !typing) render();
+                if (tab != TESTS && !typing) render();
             });
         });
     }
 
     private List<Probes.Port> ports() { return Probes.parsePorts(prefs.getString("ports", Probes.DEFAULT_PORTS)); }
 
-    // ---------------------------------------------------------------- overview
-
-    private void overview() {
-        Probes.Battery b = Probes.battery(this);
-        int thermal = Probes.thermalStatus(this);
-        long[] st = Probes.storage();
-        ActivityManager.MemoryInfo mi = Probes.memory(this);
-        Probes.Signal sig = Probes.signal(this);
-
-        List<Object[]> rows = new ArrayList<>();
-
-        double[] cap = trustedCapacity(b);
-        double hp = cap == null ? -1 : cap[0];
-        Ui.S bh = b.health != android.os.BatteryManager.BATTERY_HEALTH_GOOD ? Ui.S.BAD
-                : hp < 0 ? Ui.S.GOOD : hp >= 80 ? Ui.S.GOOD : hp >= 70 ? Ui.S.WARN : Ui.S.BAD;
-        rows.add(new Object[]{"Battery", Probes.healthName(b.health)
-                + (hp > 0 ? String.format("  ·  ~%.0f%% capacity", hp) : "  ·  charge to 80% to estimate"), bh});
-        rows.add(new Object[]{"Battery temperature", fmtTemp(b.tempC), Probes.tempStatus(b.tempC)});
-        rows.add(new Object[]{"Thermal throttling", Probes.thermalName(thermal), Probes.thermalS(thermal)});
-
-        double freePct = st[1] * 100.0 / st[0];
-        rows.add(new Object[]{"Storage free", String.format("%s  (%.0f%%)", Probes.gb(st[1]), freePct),
-                freePct > 15 ? Ui.S.GOOD : freePct > 5 ? Ui.S.WARN : Ui.S.BAD});
-        double ramPct = mi.availMem * 100.0 / mi.totalMem;
-        rows.add(new Object[]{"Memory available", String.format("%.1f GB  (%.0f%%)", mi.availMem / 1e9, ramPct),
-                mi.lowMemory ? Ui.S.BAD : ramPct > 15 ? Ui.S.GOOD : Ui.S.WARN});
-        rows.add(new Object[]{"Signal", signalSummary(sig), Probes.signalS(sig)});
-
-        Object[] host = hostVerdict(b);
-        rows.add(new Object[]{"Hosting", host[1], host[0]});
-
-        int pass = 0, fail = 0;
-        for (String id : TEST_IDS) {
-            String r = prefs.getString("t_" + id, null);
-            if (r == null) continue;
-            if (r.startsWith("P")) pass++; else fail++;
-        }
-        rows.add(new Object[]{"Hardware tests", fail > 0 ? fail + " failed · " + pass + " passed"
-                : pass + " of " + TEST_IDS.length + " passed",
-                fail > 0 ? Ui.S.BAD : pass == TEST_IDS.length ? Ui.S.GOOD : Ui.S.NA});
-
-        Object[] logger = loggerVerdict();
-        rows.add(new Object[]{"Background logger", logger[1], logger[0]});
-
-        int warn = 0, bad = 0;
-        for (Object[] r : rows) {
-            if (r[2] == Ui.S.BAD) bad++;
-            else if (r[2] == Ui.S.WARN) warn++;
-        }
-        LinearLayout v = ui.card(content, null);
-        String verdict = bad > 0 ? "Problem found" : warn > 0 ? "Mostly healthy" : "Healthy";
-        v.addView(ui.text(verdict, 28, bad > 0 ? ui.bad : warn > 0 ? ui.warn : ui.good, true));
-        v.addView(ui.text(bad + " problem" + (bad == 1 ? "" : "s") + " · " + warn + " to watch · "
-                + (rows.size() - bad - warn) + " fine", 14, ui.muted, false));
-
-        // Worst first: the thing to act on should be the first thing read.
-        LinearLayout list = ui.card(content, "Checks");
-        for (Ui.S s : new Ui.S[]{Ui.S.BAD, Ui.S.WARN, Ui.S.GOOD, Ui.S.NA})
-            for (Object[] r : rows) if (r[2] == s) ui.row(list, (String) r[0], (String) r[1], s);
+    private void showSnack(String msg) {
+        snack.setText(msg);
+        snack.setVisibility(View.VISIBLE);
+        snack.setAlpha(0f);
+        snack.animate().alpha(1f).setDuration(ValueAnimator.areAnimatorsEnabled() ? 150 : 0).start();
+        main.removeCallbacks(hideSnack);
+        main.postDelayed(hideSnack, 4000);
     }
 
-    // ---------------------------------------------------------------- battery
+    private final Runnable hideSnack = () -> snack.setVisibility(View.GONE);
 
-    private void batteryTab() {
+    // ---------------------------------------------------------------- the checks
+
+    /** One component bay: what the LCD, the grid and the service note all read from. */
+    private static final class Check {
+        final String id, label, reading, detail, cause, remedy;
+        final Ui.S s;
+        final int target;
+
+        Check(String id, String label, String reading, String detail, Ui.S s, String cause, String remedy, int target) {
+            this.id = id; this.label = label; this.reading = reading; this.detail = detail;
+            this.s = s; this.cause = cause; this.remedy = remedy; this.target = target;
+        }
+    }
+
+    private static String band(float t) {
+        if (Float.isNaN(t)) return "no reading";
+        return t < 35 ? "cool" : t < 40 ? "warm" : t < 45 ? "hot" : "too hot";
+    }
+
+    private List<Check> checks() {
+        List<Check> out = new ArrayList<>();
         Probes.Battery b = Probes.battery(this);
-        LinearLayout now = ui.card(content, "Right now");
+        double[] cap = trustedCapacity(b);
+
+        Ui.S bs = Probes.tempStatus(b.tempC);
+        if (b.health != BatteryManager.BATTERY_HEALTH_GOOD) bs = Ui.S.BAD;
+        else if (cap != null && cap[0] < 70) bs = Ui.worst(bs, Ui.S.BAD);
+        else if (cap != null && cap[0] < 80) bs = Ui.worst(bs, Ui.S.WARN);
+        out.add(new Check("battery", "Battery", fmtTemp(b.tempC),
+                band(b.tempC) + (cap != null ? String.format(Locale.getDefault(), " · %.0f%% capacity", cap[0]) : ""), bs,
+                b.health != BatteryManager.BATTERY_HEALTH_GOOD
+                        ? "Android flags the battery as " + Probes.healthName(b.health) + "."
+                        : "Battery at " + fmtTemp(b.tempC) + (cap != null ? String.format(Locale.getDefault(),
+                        ", about %.0f%% of its design capacity.", cap[0]) : "."),
+                "Heat ages a battery that never leaves the charger faster than anything else. Keep it off soft "
+                        + "surfaces and out of sun, take the case off, and on One UI turn on Battery › Protect battery "
+                        + "to stop charging at 80–85%.", READINGS));
+
+        Ui.S ps = b.plugged != 0 ? Ui.S.GOOD : Ui.S.WARN;
+        if (b.charging() && b.currentMa > 0 && b.currentMa < 500 && b.level < 90) ps = Ui.S.WARN;
+        out.add(new Check("power", "Power", b.level + "%", Probes.plugName(b.plugged).toLowerCase(Locale.getDefault()), ps,
+                b.plugged == 0 ? "Running on battery at " + b.level + "%." : "On " + Probes.plugName(b.plugged)
+                        + (b.currentMa > 0 ? ", " + b.currentMa + " mA." : "."),
+                "A server phone should stay plugged in. If the charge current sits under 500 mA below 90%, "
+                        + "try another cable or USB port before blaming the battery.", READINGS));
+
+        int th = Probes.thermalStatus(this);
+        out.add(new Check("thermal", "Thermal", Probes.thermalName(th), "throttling state", Probes.thermalS(th),
+                "Android reports thermal state " + Probes.thermalName(th).toLowerCase(Locale.getDefault()) + ".",
+                "Moderate or worse means the CPU is being slowed to shed heat, so your services slow with it. "
+                        + "Give the phone airflow and check what is using the CPU.", READINGS));
+
+        long[] st = Probes.storage();
+        double freePct = st[1] * 100.0 / st[0];
+        out.add(new Check("storage", "Storage", String.format(Locale.getDefault(), "%.1f GB", st[1] / 1e9),
+                String.format(Locale.getDefault(), "%.0f%% free", freePct),
+                freePct > 15 ? Ui.S.GOOD : freePct > 5 ? Ui.S.WARN : Ui.S.BAD,
+                String.format(Locale.getDefault(), "%.0f%% of internal storage is free.", freePct),
+                "Flash slows down and wears faster when nearly full. Rotate server logs and world backups off "
+                        + "the phone.", READINGS));
+
+        ActivityManager.MemoryInfo mi = Probes.memory(this);
+        double ramPct = mi.availMem * 100.0 / mi.totalMem;
+        out.add(new Check("memory", "Memory", String.format(Locale.getDefault(), "%.1f GB", mi.availMem / 1e9),
+                String.format(Locale.getDefault(), "%.0f%% available", ramPct),
+                mi.lowMemory ? Ui.S.BAD : ramPct > 15 ? Ui.S.GOOD : Ui.S.WARN,
+                mi.lowMemory ? "Android is in a low-memory state and killing background apps."
+                        : String.format(Locale.getDefault(), "%.0f%% of memory is available.", ramPct),
+                "Low memory is how Termux gets killed. Lower the game server's heap or stop apps you don't need.",
+                READINGS));
+
+        Probes.Signal sig = Probes.signal(this);
+        out.add(new Check("network", "Network", signalSummary(sig),
+                !sig.online ? "offline" : sig.validated ? "internet reachable" : "no internet",
+                Ui.worst(Probes.signalS(sig), sig.online && !sig.validated ? Ui.S.WARN : Ui.S.GOOD),
+                !sig.online ? "The phone has no active network." : "Connected over " + (sig.wifi ? "Wi-Fi" : "mobile data")
+                        + (sig.validated ? "." : ", but Android can't reach the internet."),
+                "Weak Wi-Fi (below -75 dBm) drops tunnels and game connections. Move the phone closer to the "
+                        + "router or give it a wired USB-Ethernet link.", READINGS));
+
+        List<Probes.Port> ps2 = ports();
+        boolean[] up = portsUp;
+        boolean known = up != null && up.length == ps2.size();
+        int n = 0;
+        if (known) for (boolean u : up) if (u) n++;
+        out.add(new Check("services", "Services", known ? n + "/" + up.length : "…",
+                known ? "ports up" : "checking",
+                !known || up.length == 0 ? Ui.S.NA : n == up.length ? Ui.S.GOOD : n == 0 ? Ui.S.BAD : Ui.S.WARN,
+                known ? (n == up.length ? "Every watched port accepts connections." : (up.length - n)
+                        + " watched port" + (up.length - n == 1 ? " is" : "s are") + " not answering.") : "Probing ports…",
+                "If every service is down, Android probably killed Termux: set it to Unrestricted battery use "
+                        + "and add it to Never sleeping apps. Edit the watched ports under History.", HISTORY));
+
+        Object[] lg = loggerVerdict();
+        out.add(new Check("logger", "Logger", (String) lg[2], "last sample", (Ui.S) lg[0],
+                "The background logger last wrote " + lg[1] + ".",
+                "One UI puts idle apps to sleep, and then nothing is recorded. Set Phone Health to Unrestricted "
+                        + "battery use so the 7-day panel stays complete.", HISTORY));
+        return out;
+    }
+
+    // ---------------------------------------------------------------- status: the front bezel
+
+    private void statusTab() {
+        List<Check> cs = checks();
+        Check worst = null;
+        for (Ui.S s : new Ui.S[]{Ui.S.BAD, Ui.S.WARN})
+            for (Check c : cs) if (worst == null && c.s == s) worst = c;
+
+        content.addView(new BezelParts.Vent(this, ui), new LinearLayout.LayoutParams(-1, -2));
+
+        LcdView lcd = new LcdView(this, ui);
+        // Line 1 names the fault once. A FAULT flashes its prefix in inverse video on alternate ticks,
+        // so it can't be mistaken for a steady CHECK, and the word itself never leaves the glass.
+        boolean flash = worst != null && worst.s == Ui.S.BAD && lcdPhase % 2 == 1 && ValueAnimator.areAnimatorsEnabled();
+        String line1 = worst == null ? "SYSTEM OK" : (worst.s == Ui.S.BAD ? "FAULT: " : "CHECK: ") + worst.label;
+        lcd.invertPrefix(flash ? 6 : 0);
+        // Line 2 steps through values only, never repeating a label line 1 already shows.
+        List<String> msgs = new ArrayList<>();
+        if (worst != null) msgs.add(worst.reading + " " + worst.detail);
+        for (Check c : cs) if (c != worst && (c.s == Ui.S.BAD || c.s == Ui.S.WARN)) msgs.add(c.label + " " + c.reading);
+        if (worst == null) {
+            Probes.Battery b = Probes.battery(this);
+            for (Check c : cs) if (c.id.equals("services") && c.s != Ui.S.NA) msgs.add("SERVING " + c.reading + " PORTS");
+            msgs.add("BATT " + fmtTempShort(b.tempC) + "C  " + b.level + "%");
+            msgs.add("UP " + duration(SystemClock.elapsedRealtime()));
+        }
+        lcd.set(line1, msgs.get(lcdPhase % msgs.size()), worst != null);
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(-1, -2);
+        ll.topMargin = ui.px(6);
+        content.addView(lcd, ll);
+
+        // component bays, 2 across
+        LinearLayout grid = new LinearLayout(this);
+        grid.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout.LayoutParams gl = new LinearLayout.LayoutParams(-1, -2);
+        gl.topMargin = ui.px(14);
+        content.addView(grid, gl);
+        LinearLayout rowL = null;
+        Check open = null;
+        for (int i = 0; i < cs.size(); i++) {
+            if (i % 2 == 0) {
+                rowL = new LinearLayout(this);
+                LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(-1, -2);
+                if (i > 0) rl.topMargin = ui.px(10);
+                grid.addView(rowL, rl);
+            }
+            Check c = cs.get(i);
+            if (c.id.equals(openBay)) open = c;
+            LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(0, -2, 1f);
+            if (i % 2 == 1) bl.leftMargin = ui.px(10);
+            rowL.addView(bay(c, c.id.equals(openBay)), bl);
+        }
+
+        if (open != null) serviceNote(open);
+
+        LinearLayout act = ui.panel(content, "Last 7 days · hourly");
+        LedMatrixView m = new LedMatrixView(this, ui);
+        m.set(history);
+        LinearLayout.LayoutParams ml = new LinearLayout.LayoutParams(-1, -2);
+        ml.topMargin = ui.px(10);
+        act.addView(m, ml);
+        act.addView(legend());
+
+        LinearLayout tag = ui.panel(content, "Service tag");
+        ui.row(tag, "Model", Build.MANUFACTURER + " " + Build.MODEL, null);
+        ui.row(tag, "Android", Build.VERSION.RELEASE + " · patch " + Build.VERSION.SECURITY_PATCH, null);
+        ui.row(tag, "Up since boot", duration(SystemClock.elapsedRealtime()), null);
+    }
+
+    /** A drive-bay caddy: LED + printed label on top, the reading, then the state word and detail. */
+    private View bay(Check c, boolean open) {
+        LinearLayout b = new LinearLayout(this);
+        b.setOrientation(LinearLayout.VERTICAL);
+        b.setBackground(ui.pressable(ui.bayShape(open ? ui.touch : 0)));
+        b.setPadding(ui.px(12), ui.px(12), ui.px(8), ui.px(12));
+        b.setMinimumHeight(ui.px(100));
+
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        LedView led = new LedView(this, ui);
+        led.set(c.s);
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(ui.px(12), ui.px(12));
+        ll.rightMargin = ui.px(8);
+        top.addView(led, ll);
+        TextView label = ui.silk(c.label, 14, ui.muted);
+        label.setSingleLine(true);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        top.addView(label, new LinearLayout.LayoutParams(0, -2, 1f));
+        top.addView(new BezelParts.Chevron(this, ui, open), new LinearLayout.LayoutParams(ui.px(20), ui.px(20)));
+        b.addView(top);
+
+        TextView v = ui.reading(c.reading, 22, c.s == Ui.S.NA ? ui.muted : ui.ink);
+        v.setPadding(0, ui.px(10), ui.px(4), ui.px(4));
+        v.setSingleLine(true);
+        v.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        b.addView(v);
+
+        // detail on the left, the state word on the right: status never rides on colour alone
+        LinearLayout foot = new LinearLayout(this);
+        foot.setGravity(Gravity.CENTER_VERTICAL);
+        TextView d = ui.text(c.detail, 13, ui.muted, false);
+        d.setSingleLine(true);
+        d.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        foot.addView(d, new LinearLayout.LayoutParams(0, -2, 1f));
+        if (c.s == Ui.S.WARN || c.s == Ui.S.BAD) {
+            TextView w = ui.silk(Ui.word(c.s), 13, c.s == Ui.S.BAD ? ui.badText : ui.ink);
+            w.setPadding(ui.px(6), 0, ui.px(4), 0);
+            foot.addView(w);
+        }
+        b.addView(foot);
+
+        b.setContentDescription(c.label + ", " + c.reading + ", " + c.detail + ", " + Ui.word(c.s)
+                + (open ? ". Expanded" : ". Double-tap for details"));
+        b.setOnClickListener(x -> {
+            openBay = c.id.equals(openBay) ? null : c.id;
+            render();
+        });
+        return b;
+    }
+
+    private void serviceNote(Check c) {
+        LinearLayout gap = new LinearLayout(this);
+        content.addView(gap, new LinearLayout.LayoutParams(-1, ui.px(12)));
+        LinearLayout p = ui.panel(content, null);
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.TOP);
+        head.setPadding(0, ui.px(10), 0, ui.px(4));
+        LedView led = new LedView(this, ui);
+        led.set(c.s);
+        LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(ui.px(12), ui.px(12));
+        ll.rightMargin = ui.px(10);
+        ll.topMargin = ui.px(5);
+        head.addView(led, ll);
+        TextView cause = ui.text(c.cause, 17, ui.ink, true);
+        cause.setLineSpacing(0, 1.2f);
+        head.addView(cause, new LinearLayout.LayoutParams(0, -2, 1f));
+        p.addView(head);
+        ui.note(p, c.remedy);
+        ui.button(p, c.target == HISTORY ? "Open history" : "Open readings", x -> switchTab(c.target));
+    }
+
+    private View legend() {
+        LinearLayout l = new LinearLayout(this);
+        l.setOrientation(LinearLayout.VERTICAL);
+        l.setPadding(0, ui.px(12), 0, ui.px(8));
+        Object[][] keys = {{Ui.S.GOOD, "Serving, all services up"}, {Ui.S.WARN, "Hot (≥40 °C) or some services down"},
+                {Ui.S.BAD, "Every service down"}, {Ui.S.NA, "No sample: logger asleep"}};
+        for (Object[] k : keys) {
+            LinearLayout r = new LinearLayout(this);
+            r.setGravity(Gravity.CENTER_VERTICAL);
+            r.setPadding(0, ui.px(3), 0, ui.px(3));
+            LedView led = new LedView(this, ui);
+            led.set((Ui.S) k[0]);
+            LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(ui.px(10), ui.px(10));
+            ll.rightMargin = ui.px(10);
+            r.addView(led, ll);
+            r.addView(ui.text((String) k[1], 13, ui.muted, false));
+            l.addView(r);
+        }
+        return l;
+    }
+
+    // ---------------------------------------------------------------- readings: bays pulled out
+
+    private void readingsTab() {
+        Probes.Battery b = Probes.battery(this);
+        LinearLayout now = ui.panel(content, "Battery");
         ui.row(now, "Level", b.level + "%", null);
         ui.row(now, "Status", Probes.statusName(b.status), null);
-        ui.row(now, "Power source", Probes.plugName(b.plugged), null);
-        ui.row(now, "Temperature", fmtTemp(b.tempC), Probes.tempStatus(b.tempC));
-        ui.row(now, "Voltage", String.format("%.2f V", b.voltageMv / 1000.0), null);
+        ui.row(now, "Power source", Probes.plugName(b.plugged), b.plugged != 0 ? Ui.S.GOOD : Ui.S.WARN);
+        ui.row(now, "Temperature", fmtTemp(b.tempC) + " · " + band(b.tempC), Probes.tempStatus(b.tempC));
+        ui.row(now, "Voltage", String.format(Locale.getDefault(), "%.2f V", b.voltageMv / 1000.0), null);
         if (b.currentMa > 0) {
             double w = b.currentMa * b.voltageMv / 1e6;
             ui.row(now, b.charging() ? "Charging current" : "Current draw",
-                    String.format("%d mA  ·  %.1f W", b.currentMa, w), b.charging() ? chargeS(b) : null);
+                    String.format(Locale.getDefault(), "%d mA · %.1f W", b.currentMa, w), b.charging() ? chargeS(b) : null);
         }
 
-        LinearLayout wear = ui.card(content, "Wear");
+        LinearLayout wear = ui.panel(content, "Battery wear");
         ui.row(wear, "Android health flag", Probes.healthName(b.health),
-                b.health == android.os.BatteryManager.BATTERY_HEALTH_GOOD ? Ui.S.GOOD : Ui.S.BAD);
+                b.health == BatteryManager.BATTERY_HEALTH_GOOD ? Ui.S.GOOD : Ui.S.BAD);
         ui.row(wear, "Charge cycles", b.cycles >= 0 ? String.valueOf(b.cycles) : "not reported",
                 b.cycles < 0 ? Ui.S.NA : b.cycles < 500 ? Ui.S.GOOD : b.cycles < 800 ? Ui.S.WARN : Ui.S.BAD);
         double full = b.estFullMah();
         double[] cap = trustedCapacity(b);
-        ui.row(wear, "Live capacity estimate", full > 0 ? String.format("%.0f mAh", full) : "needs ≥15% charge", null);
-        ui.row(wear, "Design capacity", b.designMah > 0 ? String.format("%.0f mAh", b.designMah) : "unknown", null);
+        ui.row(wear, "Live capacity estimate", full > 0 ? String.format(Locale.getDefault(), "%.0f mAh", full) : "needs ≥15% charge", null);
+        ui.row(wear, "Design capacity", b.designMah > 0 ? String.format(Locale.getDefault(), "%.0f mAh", b.designMah) : "unknown", null);
         ui.row(wear, "Capacity vs design", cap == null ? "charge to 80% once"
-                        : String.format("~%.0f%%  (%s)", cap[0], day((long) cap[1])),
+                        : String.format(Locale.getDefault(), "~%.0f%% (%s)", cap[0], day((long) cap[1])),
                 cap == null ? Ui.S.NA : cap[0] >= 80 ? Ui.S.GOOD : cap[0] >= 70 ? Ui.S.WARN : Ui.S.BAD);
         ui.row(wear, "Chemistry", b.tech.isEmpty() ? "unknown" : b.tech, null);
-        ui.note(wear, "Capacity = the fuel gauge's charge counter divided by the level. The graded figure comes only "
-                + "from readings taken at 80% charge or more, where the counter's error is smallest. A figure that "
-                + "stays at exactly 100% for months suggests the gauge is echoing the design value. On One UI 6.1 and "
-                + "later, Settings › About phone › Battery information shows Samsung's own health figure. Use it as "
-                + "the tie-breaker.");
-        if (b.charging() && b.currentMa > 0 && b.currentMa < 500 && b.level < 90)
-            ui.note(wear, "Charging under 500 mA below 90% usually means a weak cable or USB port, not the battery.");
+        ui.note(wear, "Capacity is the fuel gauge's charge counter divided by the level, graded only from readings "
+                + "taken at 80% or more, where the counter's error is smallest. On One UI 6.1 and later, Settings › "
+                + "About phone › Battery information shows Samsung's own figure; use it as the tie-breaker.");
 
-        long now2 = System.currentTimeMillis();
-        List<History.Sample> day = History.since(history, now2 - DAY);
-        LinearLayout ch = ui.card(content, "Last 24 h");
-        ch.addView(ui.text("Temperature", 13, ui.muted, false));
-        ChartView t = new ChartView(this, ui);
-        t.set(day, s -> s.temp, DAY, ui.warn, "°", 25, 45, 40);
-        ch.addView(t);
-        ch.addView(ui.text("Level", 13, ui.muted, false));
-        ChartView l = new ChartView(this, ui);
-        l.set(day, s -> s.level, DAY, ui.good, "%", 0, 100, Double.NaN);
-        ch.addView(l);
+        int thermal = Probes.thermalStatus(this);
+        float head = Probes.thermalHeadroom(this);
+        LinearLayout th = ui.panel(content, "Thermal");
+        ui.row(th, "Throttling state", Probes.thermalName(thermal), Probes.thermalS(thermal));
+        if (!Float.isNaN(head))
+            ui.row(th, "Headroom (10 s ahead)", String.format(Locale.getDefault(), "%.0f%% of limit", head * 100),
+                    head < 0.7 ? Ui.S.GOOD : head < 0.95 ? Ui.S.WARN : Ui.S.BAD);
+        List<String[]> zones = Probes.thermalZones();
+        for (String[] z : zones) ui.row(th, z[0], z[1] + " °C", null);
+        if (zones.isEmpty()) ui.note(th, "Per-sensor temperatures are hidden from apps on this phone. Battery "
+                + "temperature is the best proxy for heat.");
+
+        List<long[]> f = Probes.cpuFreqs();
+        LinearLayout cpu = ui.panel(content, "CPU · " + Runtime.getRuntime().availableProcessors() + " cores");
+        boolean any = false;
+        for (int i = 0; i < f.size(); i++) {
+            long[] c = f.get(i);
+            if (c[0] < 0) continue;
+            any = true;
+            ui.row(cpu, "cpu" + i, String.format(Locale.getDefault(), "%.2f / %.2f GHz", c[0] / 1e6, c[1] / 1e6), null);
+        }
+        if (!any) ui.note(cpu, "The kernel doesn't show core clocks to apps on this phone.");
+
+        ActivityManager.MemoryInfo mi = Probes.memory(this);
+        LinearLayout mem = ui.panel(content, "Memory");
+        double ramPct = mi.availMem * 100.0 / mi.totalMem;
+        ui.row(mem, "Total", String.format(Locale.getDefault(), "%.1f GB", mi.totalMem / 1e9), null);
+        ui.row(mem, "Available", String.format(Locale.getDefault(), "%.1f GB · %.0f%%", mi.availMem / 1e9, ramPct),
+                ramPct > 15 ? Ui.S.GOOD : Ui.S.WARN);
+        ui.row(mem, "Low-memory state", mi.lowMemory ? "yes, apps being killed" : "no", mi.lowMemory ? Ui.S.BAD : Ui.S.GOOD);
+
+        long[] st = Probes.storage();
+        double freePct = st[1] * 100.0 / st[0];
+        LinearLayout sto = ui.panel(content, "Storage");
+        ui.row(sto, "Capacity", Probes.gb(st[0]), null);
+        ui.row(sto, "Free", String.format(Locale.getDefault(), "%s · %.0f%%", Probes.gb(st[1]), freePct),
+                freePct > 15 ? Ui.S.GOOD : freePct > 5 ? Ui.S.WARN : Ui.S.BAD);
+        List<String[]> runs = benchRuns();
+        for (int i = Math.max(0, runs.size() - 4); i < runs.size(); i++) {
+            String[] r = runs.get(i);
+            ui.row(sto, "Speed · " + day(Long.parseLong(r[0])) + (i == 0 ? " (baseline)" : ""),
+                    String.format(Locale.getDefault(), "%.0f MB/s · %.0f IOPS", Double.parseDouble(r[1]), Double.parseDouble(r[2])),
+                    i == runs.size() - 1 ? benchS(runs) : null);
+        }
+        ui.note(sto, "Writes 256 MB with fsync, then synced 4 KB random writes for 3 s. The first run is kept as "
+                + "the baseline; a drop of more than 30% means the flash is wearing.");
+        Button bb = ui.button(sto, benchRunning ? "Testing… about 10 s" : "Run storage speed test", v -> runBench());
+        bb.setEnabled(!benchRunning);
+        bb.setAlpha(benchRunning ? 0.6f : 1f);
+
+        Probes.Signal s = Probes.signal(this);
+        LinearLayout c = ui.panel(content, "Network");
+        ui.row(c, "Active network", !s.online ? "offline" : s.wifi ? "Wi-Fi" : s.cellular ? "Mobile data" : "other",
+                s.online ? Ui.S.GOOD : Ui.S.BAD);
+        ui.row(c, "Internet reachable", s.validated ? "yes" : "no", s.validated ? Ui.S.GOOD : Ui.S.WARN);
+        ui.row(c, "Latency to 1.1.1.1", latencyMs == -2 ? "measuring…" : latencyMs < 0 ? "no reply" : latencyMs + " ms",
+                latencyMs < 0 ? Ui.S.NA : latencyMs < 80 ? Ui.S.GOOD : latencyMs < 200 ? Ui.S.WARN : Ui.S.BAD);
+        if (s.wifi && s.wifiRssi != Integer.MIN_VALUE) ui.row(c, "Wi-Fi signal", s.wifiRssi + " dBm", Probes.signalS(s));
+        if (s.downKbps > 0)
+            ui.row(c, "Link estimate", String.format(Locale.getDefault(), "↓ %.1f  ↑ %.1f Mbps", s.downKbps / 1000.0, s.upKbps / 1000.0), null);
+
+        LinearLayout cell = ui.panel(content, "Mobile" + (s.operator.isEmpty() ? "" : " · " + s.operator));
+        if (s.cells.isEmpty()) ui.note(cell, "No cell signal reported (no SIM, or airplane mode).");
+        for (String x : s.cells) ui.row(cell, x.split(" {2}")[0], x.substring(x.indexOf("  ") + 2),
+                s.level < 0 ? Ui.S.NA : s.level >= 3 ? Ui.S.GOOD : s.level == 2 ? Ui.S.WARN : Ui.S.BAD);
+        ui.note(cell, "Above -95 dBm is solid on LTE/5G. Below -110 dBm, the radio burns battery hunting for a tower.");
     }
 
     /**
@@ -345,66 +700,6 @@ public class MainActivity extends Activity {
     private Ui.S chargeS(Probes.Battery b) {
         if (b.level >= 90) return Ui.S.NA; // taper near full is normal
         return b.currentMa >= 1000 ? Ui.S.GOOD : b.currentMa >= 500 ? Ui.S.WARN : Ui.S.BAD;
-    }
-
-    // ---------------------------------------------------------------- system
-
-    private void systemTab() {
-        int thermal = Probes.thermalStatus(this);
-        float head = Probes.thermalHeadroom(this);
-        LinearLayout th = ui.card(content, "Thermal");
-        ui.row(th, "Throttling state", Probes.thermalName(thermal), Probes.thermalS(thermal));
-        if (!Float.isNaN(head))
-            ui.row(th, "Headroom (10 s ahead)", String.format("%.0f%% of limit", head * 100),
-                    head < 0.7 ? Ui.S.GOOD : head < 0.95 ? Ui.S.WARN : Ui.S.BAD);
-        List<String[]> zones = Probes.thermalZones();
-        for (String[] z : zones) ui.row(th, z[0], z[1] + " °C", null);
-        if (zones.isEmpty()) ui.note(th, "Per-sensor temperatures are hidden from apps on this phone. "
-                + "Battery temperature (Battery tab) is the best proxy for heat.");
-
-        LinearLayout cpu = ui.card(content, "CPU (" + Runtime.getRuntime().availableProcessors() + " cores)");
-        List<long[]> f = Probes.cpuFreqs();
-        boolean any = false;
-        for (int i = 0; i < f.size(); i++) {
-            long[] c = f.get(i);
-            if (c[0] < 0) continue;
-            any = true;
-            ui.row(cpu, "cpu" + i, c[0] < 0 ? "offline"
-                    : String.format("%.2f / %.2f GHz", c[0] / 1e6, c[1] / 1e6), null);
-        }
-        if (!any) ui.note(cpu, "The kernel won't show core clocks to apps here.");
-
-        ActivityManager.MemoryInfo mi = Probes.memory(this);
-        LinearLayout mem = ui.card(content, "Memory");
-        ui.row(mem, "Total", String.format("%.1f GB", mi.totalMem / 1e9), null);
-        double ramPct = mi.availMem * 100.0 / mi.totalMem;
-        ui.row(mem, "Available", String.format("%.1f GB  (%.0f%%)", mi.availMem / 1e9, ramPct),
-                ramPct > 15 ? Ui.S.GOOD : Ui.S.WARN);
-        ui.row(mem, "Low-memory state", mi.lowMemory ? "YES, apps being killed" : "no",
-                mi.lowMemory ? Ui.S.BAD : Ui.S.GOOD);
-
-        long[] st = Probes.storage();
-        double freePct = st[1] * 100.0 / st[0];
-        LinearLayout sto = ui.card(content, "Storage");
-        ui.row(sto, "Capacity", Probes.gb(st[0]), null);
-        ui.row(sto, "Free", String.format("%s  (%.0f%%)", Probes.gb(st[1]), freePct),
-                freePct > 15 ? Ui.S.GOOD : freePct > 5 ? Ui.S.WARN : Ui.S.BAD);
-        List<String[]> runs = benchRuns();
-        for (int i = Math.max(0, runs.size() - 4); i < runs.size(); i++) {
-            String[] r = runs.get(i);
-            ui.row(sto, "Speed · " + day(Long.parseLong(r[0])),
-                    String.format("%.0f MB/s  ·  %.0f IOPS", Double.parseDouble(r[1]), Double.parseDouble(r[2])),
-                    i == runs.size() - 1 ? benchS(runs) : null);
-        }
-        ui.note(sto, "Writes 256 MB with fsync, then 4 KB synced random writes for 3 s. Run it every few months. "
-                + "A drop of more than 30% from your first run means the flash is wearing.");
-        Button bb = ui.button(sto, benchRunning ? "Testing… (≈10 s)" : "Run storage speed test", v -> runBench());
-        bb.setEnabled(!benchRunning);
-
-        LinearLayout dev = ui.card(content, "Device");
-        ui.row(dev, "Up since boot", duration(SystemClock.elapsedRealtime()), null);
-        ui.row(dev, "Security patch", Build.VERSION.SECURITY_PATCH, null);
-        ui.row(dev, "Build", Build.DISPLAY, null);
     }
 
     private List<String[]> benchRuns() {
@@ -439,136 +734,106 @@ public class MainActivity extends Activity {
             String fe = err;
             main.post(() -> {
                 benchRunning = false;
-                if (fe != null) Toast.makeText(this, "Speed test failed: " + fe, Toast.LENGTH_LONG).show();
+                showSnack(fe != null ? "Speed test failed: " + fe : "Speed test recorded.");
                 render();
             });
         });
     }
 
-    // ---------------------------------------------------------------- network
-
-    private void networkTab() {
-        Probes.Signal s = Probes.signal(this);
-        LinearLayout c = ui.card(content, "Connection");
-        ui.row(c, "Active network", !s.online ? "offline" : s.wifi ? "Wi-Fi" : s.cellular ? "Mobile data" : "other",
-                s.online ? Ui.S.GOOD : Ui.S.BAD);
-        ui.row(c, "Internet reachable", s.validated ? "yes" : "no", s.validated ? Ui.S.GOOD : Ui.S.WARN);
-        ui.row(c, "Latency to 1.1.1.1", latencyMs == -2 ? "measuring…" : latencyMs < 0 ? "no reply"
-                : latencyMs + " ms", latencyMs < 0 ? Ui.S.NA : latencyMs < 80 ? Ui.S.GOOD
-                : latencyMs < 200 ? Ui.S.WARN : Ui.S.BAD);
-        if (s.wifi && s.wifiRssi != Integer.MIN_VALUE)
-            ui.row(c, "Wi-Fi signal", s.wifiRssi + " dBm", Probes.signalS(s));
-        if (s.downKbps > 0)
-            ui.row(c, "Link estimate", String.format("↓ %.1f  ↑ %.1f Mbps", s.downKbps / 1000.0, s.upKbps / 1000.0), null);
-
-        LinearLayout cell = ui.card(content, "Mobile" + (s.operator.isEmpty() ? "" : " · " + s.operator));
-        if (s.cells.isEmpty()) ui.note(cell, "No cell signal reported (no SIM, or airplane mode).");
-        for (String x : s.cells) ui.row(cell, x.split(" {2}")[0], x.substring(x.indexOf("  ") + 2),
-                s.level < 0 ? Ui.S.NA : s.level >= 3 ? Ui.S.GOOD : s.level == 2 ? Ui.S.WARN : Ui.S.BAD);
-        ui.note(cell, "Rule of thumb: above -95 dBm is solid on LTE/5G. Below -110 dBm, calls drop and the radio "
-                + "burns battery hunting for a tower.");
-    }
-
     private String signalSummary(Probes.Signal s) {
         if (!s.online) return "offline";
-        if (s.wifi && s.wifiRssi != Integer.MIN_VALUE) return "Wi-Fi " + s.wifiRssi + " dBm";
+        if (s.wifi && s.wifiRssi != Integer.MIN_VALUE) return s.wifiRssi + " dBm";
         if (s.bestDbm != Integer.MIN_VALUE) return s.bestDbm + " dBm";
         return s.wifi ? "Wi-Fi" : "mobile";
     }
 
-    // ---------------------------------------------------------------- host fitness
+    // ---------------------------------------------------------------- history: while nobody watched
 
-    /** {S, text}: is this phone fit to keep hosting right now? */
-    private Object[] hostVerdict(Probes.Battery b) {
-        List<Probes.Port> ps = ports();
-        boolean[] up = portsUp;
-        if (up == null || up.length != ps.size()) return new Object[]{Ui.S.NA, "checking…"};
-        int n = 0;
-        for (boolean u : up) if (u) n++;
-        Ui.S s = n == up.length ? Ui.S.GOOD : n == 0 ? Ui.S.BAD : Ui.S.WARN;
-        if (b.plugged == 0) s = Ui.worst(s, Ui.S.WARN);
-        s = Ui.worst(s, Probes.tempStatus(b.tempC));
-        return new Object[]{s, n + "/" + up.length + " services" + (b.plugged == 0 ? " · on battery" : "")};
-    }
-
-    /** {S, text}: has the background sampler actually been running? Samsung likes to put it to sleep. */
+    /** {S, sentence, short reading}: has the background sampler actually been running? */
     private Object[] loggerVerdict() {
-        if (history.isEmpty()) return new Object[]{Ui.S.NA, "starting"};
+        if (history.isEmpty()) return new Object[]{Ui.S.NA, "nothing yet", "…"};
         long age = System.currentTimeMillis() - history.get(history.size() - 1).t;
-        return new Object[]{age < 45 * 60_000L ? Ui.S.GOOD : Ui.S.WARN, "last sample " + duration(age) + " ago"};
+        return new Object[]{age < 45 * 60_000L ? Ui.S.GOOD : Ui.S.WARN, duration(age) + " ago", shortAge(age)};
     }
 
-    private void hostTab() {
-        Probes.Battery b = Probes.battery(this);
-        Object[] v = hostVerdict(b);
-        LinearLayout top = ui.card(content, "Fitness for 24/7 hosting");
-        ui.row(top, "Verdict", (String) v[1], (Ui.S) v[0]);
-        ui.row(top, "Power", Probes.plugName(b.plugged) + " · " + b.level + "%", b.plugged != 0 ? Ui.S.GOOD : Ui.S.WARN);
-        ui.row(top, "Battery temperature", fmtTemp(b.tempC), Probes.tempStatus(b.tempC));
-        int th = Probes.thermalStatus(this);
-        ui.row(top, "Throttling", Probes.thermalName(th), Probes.thermalS(th));
-        ui.row(top, "Up since boot", duration(SystemClock.elapsedRealtime()), null);
+    private void historyTab() {
+        long now = System.currentTimeMillis();
+        List<History.Sample> week = History.since(history, now - History.KEEP_MS);
+        List<History.Sample> day = History.since(week, now - DAY);
 
-        LinearLayout svc = ui.card(content, "Services on this phone");
+        LinearLayout svc = ui.panel(content, "Watched services");
         List<Probes.Port> ps = ports();
         boolean[] up = portsUp;
         for (int i = 0; i < ps.size(); i++) {
             Probes.Port p = ps.get(i);
             boolean known = up != null && up.length == ps.size();
-            ui.row(svc, p.name + "  :" + p.port, !known ? "checking…" : up[i] ? "listening" : "DOWN",
+            ui.row(svc, p.name + "  :" + p.port, !known ? "checking…" : up[i] ? "listening" : "down",
                     !known ? Ui.S.NA : up[i] ? Ui.S.GOOD : Ui.S.BAD);
         }
-        ui.note(svc, "A service shows DOWN when nothing accepts connections on 127.0.0.1 at that port. "
-                + "If every service is down, Android probably killed Termux.");
+        ui.note(svc, "Each port is probed on 127.0.0.1. Edit the list as port name, comma-separated.");
         portsEdit = new EditText(this);
         portsEdit.setText(prefs.getString("ports", Probes.DEFAULT_PORTS));
-        portsEdit.setTextColor(ui.text);
-        portsEdit.setTextSize(14);
+        portsEdit.setTextColor(ui.ink);
+        portsEdit.setTextSize(15);
+        portsEdit.setFontFeatureSettings("tnum");
         portsEdit.setInputType(InputType.TYPE_CLASS_TEXT);
         portsEdit.setSingleLine(true);
-        svc.addView(portsEdit);
+        portsEdit.setBackground(ui.rounded(ui.bezel, 6));
+        portsEdit.setPadding(ui.px(12), 0, ui.px(12), 0);
+        portsEdit.setMinHeight(ui.px(48));
+        svc.addView(portsEdit, new LinearLayout.LayoutParams(-1, ui.px(48)));
         ui.button(svc, "Save ports", x -> {
             prefs.edit().putString("ports", portsEdit.getText().toString()).apply();
             portsEdit.clearFocus();
             portsUp = null;
             asyncAt = 0;
+            showSnack("Ports saved. Probing now.");
             render();
         });
 
-        boolean termux = installed("com.termux");
-        LinearLayout keep = ui.card(content, "Keep it alive");
-        ui.row(keep, "Termux", termux ? "installed" : "not installed", termux ? Ui.S.GOOD : Ui.S.NA);
-        Object[] lg = loggerVerdict();
-        ui.row(keep, "This app's logger", (String) lg[1], (Ui.S) lg[0]);
-        ui.note(keep, "One UI puts idle apps to sleep, and that kills both Termux and this logger. Set both to "
-                + "Unrestricted battery use, and add them to Never sleeping apps (Settings › Battery › Background "
-                + "usage limits).");
-        if (termux) ui.button(keep, "Open Termux app settings", x -> openAppSettings("com.termux"));
-        ui.button(keep, "Open Phone Health app settings", x -> openAppSettings(getPackageName()));
-
-        long now = System.currentTimeMillis();
-        List<History.Sample> week = History.since(history, now - History.KEEP_MS);
-        List<History.Sample> day = History.since(week, now - DAY);
-        LinearLayout ch = ui.card(content, "Last 7 days");
+        LinearLayout ch = ui.panel(content, "Last 7 days");
         int hot = 0;
         for (History.Sample s : day) if (s.temp >= 40) hot++;
         // A fresh install hasn't had 24 h to collect 96 samples; expect only what time allows.
         long logging = week.isEmpty() ? 0 : now - week.get(0).t;
         int expected = (int) Math.max(1, Math.min(96, logging / (15 * 60_000L)));
-        ui.row(ch, "Samples in last 24 h", day.size() + " of ~" + expected,
-                day.size() >= expected * 0.8 ? Ui.S.GOOD : day.size() >= expected * 0.4 ? Ui.S.WARN : Ui.S.BAD);
-        ui.row(ch, "Time at ≥40 °C (24 h)", day.isEmpty() ? "—" : String.format("≈%.1f h", hot * 0.25),
+        // Coverage counts quarter-hour slots with at least one sample, so extra samples from
+        // opening the app can't push it past 100%.
+        java.util.Set<Long> slots = new java.util.HashSet<>();
+        for (History.Sample s : day) slots.add(s.t / (15 * 60_000L));
+        int covered = Math.min(slots.size(), expected);
+        ui.row(ch, "Logged in last 24 h", covered + " of " + expected + " quarter-hours",
+                covered >= expected * 0.8 ? Ui.S.GOOD : covered >= expected * 0.4 ? Ui.S.WARN : Ui.S.BAD);
+        ui.row(ch, "Time at 40 °C or more", day.isEmpty() ? "—" : String.format(Locale.getDefault(), "≈%.1f h in 24 h", hot * 0.25),
                 hot == 0 ? Ui.S.GOOD : hot <= 8 ? Ui.S.WARN : Ui.S.BAD);
-        ch.addView(ui.text("Battery temperature", 13, ui.muted, false));
-        ChartView t = new ChartView(this, ui);
-        t.set(week, s -> s.temp, History.KEEP_MS, ui.warn, "°", 25, 45, 40);
-        ch.addView(t);
-        ch.addView(ui.text("Services up (%)", 13, ui.muted, false));
-        ChartView sv = new ChartView(this, ui);
-        sv.set(week, s -> s.portsTotal == 0 ? Double.NaN : s.portsUp * 100.0 / s.portsTotal,
-                History.KEEP_MS, ui.good, "%", 0, 100, Double.NaN);
-        ch.addView(sv);
-        ui.note(ch, "Breaks in a line mean the logger was asleep, so the phone could have been anything then.");
+        // Data lines are ink; only the dashed 40 °C limit carries a state colour.
+        chart(ch, "Battery temperature, °C", week, s -> s.temp, History.KEEP_MS, ui.data(), "°", 25, 45, 40);
+        chart(ch, "Services up, %", week, s -> s.portsTotal == 0 ? Double.NaN : s.portsUp * 100.0 / s.portsTotal,
+                History.KEEP_MS, ui.data(), "%", 0, 100, Double.NaN);
+        chart(ch, "Charge level (24 h), %", day, s -> s.level, DAY, ui.data(), "%", 0, 100, Double.NaN);
+        ui.note(ch, "Breaks in a line mean the logger was asleep; the phone could have been anything then.");
+
+        boolean termux = installed("com.termux");
+        LinearLayout keep = ui.panel(content, "Keep it alive");
+        ui.row(keep, "Termux", termux ? "installed" : "not installed", termux ? Ui.S.GOOD : Ui.S.NA);
+        Object[] lg = loggerVerdict();
+        ui.row(keep, "Phone Health logger", "last sample " + lg[1], (Ui.S) lg[0]);
+        ui.note(keep, "One UI puts idle apps to sleep, which kills both your server and this logger. Set both to "
+                + "Unrestricted battery use and add them to Never sleeping apps (Settings › Battery › Background "
+                + "usage limits).");
+        if (termux) ui.button(keep, "Termux app settings", x -> openAppSettings("com.termux"));
+        ui.button(keep, "Phone Health app settings", x -> openAppSettings(getPackageName()));
+    }
+
+    private void chart(LinearLayout parent, String title, List<History.Sample> data,
+                       java.util.function.ToDoubleFunction<History.Sample> f, long window, int color,
+                       String unit, double min, double max, double warnAt) {
+        TextView t = ui.silk(title, 12, ui.muted);
+        t.setPadding(0, ui.px(16), 0, ui.px(6));
+        parent.addView(t);
+        ChartView cv = new ChartView(this, ui);
+        cv.set(data, f, window, color, unit, min, max, warnAt);
+        parent.addView(cv);
     }
 
     private boolean installed(String pkg) {
@@ -584,44 +849,70 @@ public class MainActivity extends Activity {
         startActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg)));
     }
 
-    // ---------------------------------------------------------------- tests
+    // ---------------------------------------------------------------- tests: a service procedure
 
     private void testsTab() {
-        LinearLayout c = ui.card(content, "Hardware self-test");
-        ui.note(c, "Run each test once now for a baseline. Rerun one when something feels off.");
+        int pass = 0, fail = 0;
+        for (String id : TEST_IDS) {
+            String r = prefs.getString("t_" + id, null);
+            if (r == null) continue;
+            if (r.startsWith("P")) pass++; else fail++;
+        }
+        LinearLayout c = ui.panel(content, "Hardware procedure · " + pass + " passed · " + fail + " failed");
+        ui.note(c, "Run every step once for a baseline, then rerun a step when something feels off.");
         for (int i = 0; i < TEST_IDS.length; i++) {
             final int idx = i;
+            if (i > 0) {
+                View div = new View(this);
+                div.setBackgroundColor(ui.rule);
+                c.addView(div, new LinearLayout.LayoutParams(-1, Math.max(1, ui.px(1) / 2 + 1)));
+            }
             LinearLayout row = new LinearLayout(this);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-            row.setPadding(0, ui.px(10), 0, ui.px(10));
+            row.setPadding(0, ui.px(14), 0, ui.px(14));
+            String r = prefs.getString("t_" + TEST_IDS[i], null);
+            String[] p = r == null ? null : r.split("\\|", 3);
+            boolean ok = p != null && "P".equals(p[0]);
+            Ui.S st = p == null ? Ui.S.NA : ok ? Ui.S.GOOD : Ui.S.BAD;
+
+            // margin column: step number over its LED and state word
+            LinearLayout margin = new LinearLayout(this);
+            margin.setOrientation(LinearLayout.VERTICAL);
+            TextView num = ui.silk(String.format(Locale.ROOT, "%02d", i + 1), 22, ui.muted);
+            num.setFontFeatureSettings("tnum");
+            margin.addView(num);
+            LinearLayout state = new LinearLayout(this);
+            state.setGravity(Gravity.CENTER_VERTICAL);
+            state.setPadding(0, ui.px(6), 0, 0);
+            LedView led = new LedView(this, ui);
+            led.set(st);
+            LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(ui.px(10), ui.px(10));
+            ll.rightMargin = ui.px(5);
+            state.addView(led, ll);
+            state.addView(ui.silk(p == null ? "untested" : ok ? "pass" : "fail", 11, st == Ui.S.BAD ? ui.badText : ui.muted));
+            margin.addView(state);
+            row.addView(margin, new LinearLayout.LayoutParams(ui.px(72), -2));
+
             LinearLayout col = new LinearLayout(this);
             col.setOrientation(LinearLayout.VERTICAL);
-            col.addView(ui.text(TEST_NAMES[i], 16, ui.text, true));
-            col.addView(ui.text(TEST_HINTS[i], 13, ui.muted, false));
-            String r = prefs.getString("t_" + TEST_IDS[i], null);
-            if (r != null) {
-                String[] p = r.split("\\|", 3);
-                boolean pass = "P".equals(p[0]);
-                TextView res = ui.text((pass ? "PASS" : "FAIL") + " · " + day(Long.parseLong(p[1]))
-                        + (p.length > 2 && !p[2].isEmpty() ? " · " + p[2] : ""), 13, pass ? ui.good : ui.bad, true);
-                col.addView(res);
+            col.addView(ui.text(TEST_NAMES[i], 16, ui.ink, true));
+            TextView hint = ui.text(TEST_HINTS[i], 13, ui.muted, false);
+            hint.setPadding(0, ui.px(4), 0, 0);
+            hint.setLineSpacing(0, 1.2f);
+            col.addView(hint);
+            if (p != null) {
+                TextView rt = ui.reading(day(Long.parseLong(p[1]))
+                        + (p.length > 2 && !p[2].isEmpty() ? " · " + p[2] : ""), 13, ok ? ui.ink : ui.badText);
+                rt.setPadding(0, ui.px(6), 0, 0);
+                col.addView(rt);
             }
             row.addView(col, new LinearLayout.LayoutParams(0, -2, 1f));
-            Button run = new Button(this);
-            run.setText(r == null ? "Run" : "Rerun");
-            run.setAllCaps(false);
-            run.setTextColor(0xFFFFFFFF);
-            run.setBackground(ui.rounded(ui.accent, 10));
-            run.setOnClickListener(v -> runTest(idx));
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ui.px(84), ui.px(40));
-            lp.leftMargin = ui.px(10);
+            Button run = ui.touchButton(r == null ? "Run" : "Rerun", v -> runTest(idx));
+            run.setContentDescription((r == null ? "Run " : "Rerun ") + TEST_NAMES[i]);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(-2, ui.px(48));
+            lp.leftMargin = ui.px(12);
+            lp.gravity = Gravity.TOP;
             row.addView(run, lp);
             c.addView(row);
-            if (i < TEST_IDS.length - 1) {
-                View div = new View(this);
-                div.setBackgroundColor(ui.line);
-                c.addView(div, new LinearLayout.LayoutParams(-1, ui.px(1)));
-            }
         }
     }
 
@@ -635,7 +926,7 @@ public class MainActivity extends Activity {
                 HwTests.tone(this, false, r -> resolve(i, r, "Did you hear a clean rising tone from the loudspeaker?"));
                 break;
             case "earpiece":
-                Toast.makeText(this, "Hold the phone to your ear", Toast.LENGTH_SHORT).show();
+                showSnack("Hold the phone to your ear.");
                 main.postDelayed(() -> HwTests.tone(this, true,
                         r -> resolve(i, r, "Did you hear the tone from the earpiece at the top?")), 1500);
                 break;
@@ -644,7 +935,7 @@ public class MainActivity extends Activity {
                     requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQ_MIC);
                     return;
                 }
-                Toast.makeText(this, "Recording 3 s. Clap or talk", Toast.LENGTH_SHORT).show();
+                showSnack("Recording for 3 s. Clap or talk.");
                 HwTests.mic(r -> resolve(i, r, null));
                 break;
             case "vibrate":
@@ -654,7 +945,7 @@ public class MainActivity extends Activity {
                 HwTests.torch(this, r -> resolve(i, r, "Did the flashlight come on?"));
                 break;
             case "sensors":
-                Toast.makeText(this, "Tilt the phone and wave over the top edge…", Toast.LENGTH_LONG).show();
+                showSnack("Tilt the phone and wave a hand over the top edge…");
                 HwTests.sensors(this, r -> resolve(i, r, null));
                 break;
         }
@@ -675,16 +966,14 @@ public class MainActivity extends Activity {
             boolean pass = r.startsWith("P");
             String detail = r.length() > 2 ? r.substring(2) : "";
             saveTest(i, pass, detail);
-            Toast.makeText(this, TEST_NAMES[i] + ": " + (pass ? "PASS" : "FAIL") + "\n" + detail,
-                    Toast.LENGTH_LONG).show();
+            showSnack(TEST_NAMES[i] + ": " + (pass ? "pass" : "fail") + (detail.isEmpty() ? "" : " · " + detail));
         }
     }
 
     private void saveTest(int i, boolean pass, String detail) {
         prefs.edit().putString("t_" + TEST_IDS[i], (pass ? "P" : "F") + "|" + System.currentTimeMillis()
                 + "|" + detail.replace("|", "/")).apply();
-        tab = TESTS;
-        render();
+        if (tab != TESTS) switchTab(TESTS); else render();
     }
 
     @Override
@@ -701,15 +990,27 @@ public class MainActivity extends Activity {
         if (req != REQ_MIC) return;
         int mic = java.util.Arrays.asList(TEST_IDS).indexOf("mic");
         if (grants.length > 0 && grants[0] == PackageManager.PERMISSION_GRANTED) runTest(mic);
-        else Toast.makeText(this, "Microphone test needs the mic permission. Nothing was recorded as failed.",
-                Toast.LENGTH_LONG).show();
+        else showSnack("The microphone step needs the mic permission. Nothing was recorded as failed.");
     }
 
     // ---------------------------------------------------------------- formatting
 
-    private static String fmtTemp(float t) { return Float.isNaN(t) ? "unknown" : String.format("%.1f °C", t); }
+    private static String fmtTemp(float t) {
+        return Float.isNaN(t) ? "unknown" : String.format(Locale.getDefault(), "%.1f °C", t);
+    }
+
+    private static String fmtTempShort(float t) {
+        return Float.isNaN(t) ? "—" : String.format(Locale.getDefault(), "%.1f°", t);
+    }
 
     private static String day(long ms) { return new SimpleDateFormat("d MMM", Locale.getDefault()).format(new Date(ms)); }
+
+    private static String shortAge(long ms) {
+        long m = ms / 60_000;
+        if (m < 60) return m + " min";
+        if (m < 60 * 24) return (m / 60) + " h";
+        return (m / 60 / 24) + " d";
+    }
 
     private static String duration(long ms) {
         long m = ms / 60_000, h = m / 60, d = h / 24;

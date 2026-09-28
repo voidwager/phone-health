@@ -1,0 +1,77 @@
+{
+  "title": "Choose the visual world for Phone Health",
+  "question": "The roll assigned the Inspection Tag. Keep it, take an alternate, or re-roll.",
+  "options": [
+    {
+      "id": "assigned",
+      "label": "Inspection Tag",
+      "kicker": "THE ROLL",
+      "lineage": "lockout/tagout and equipment inspection tags hung on machines that run unattended",
+      "thesis": "The server phone wears its own inspection tag: the whole screen IS the tag, and the tag's stock colour is the verdict, readable from across the room.",
+      "palette": ["#1E7A46", "#F2C200", "#C8102E", "#111111", "#EEF3EF"],
+      "materials": ["die-cut tag stock", "grommet hole", "stencil-condensed printed caps", "perforated tear-off stub", "punched date grid"],
+      "viewport": "Full-bleed tag in the verdict colour (green INSPECTED · SERVING, safety-yellow CHECK, red DO NOT LEAVE UNATTENDED). Grommet hole top-centre; the worst finding set at headliner size under it; a 7-day punch strip (7 rows x 96 quarter-hour punches, hollow = logger asleep, red = service down) with a 'now' marker; services and a tear-off stub with the last-inspected time at the foot. Bottom bar: Status / Readings / History / Tests.",
+      "risk": "Industrial-maintenance ephemera is sysadmin-adjacent, not every hobbyist's world; set timidly it reads as a green card with a hole in it.",
+      "raised": [
+        {"from": "challenger-festival-lineup", "raise": "Billing: severity is carried by type size alone. The worst problem headlines full-width; healthy checks pack into a small justified block at the tag's foot."},
+        {"from": "challenger-drum-step-row", "raise": "One unbroken timeline: the 7-day punch strip is the page's single continuous line, with a chase marker on the current quarter-hour."},
+        {"from": "challenger-cyclorama", "raise": "Named phases, never colour alone: temperature and throttling read as named bands (COOL / WARM / HOT / THROTTLING) printed beside every colour."},
+        {"from": "challenger-alphabet-storm", "raise": "One statement per viewport: the first screen makes exactly one claim, the verdict; everything else sits below the stub."}
+      ]
+    },
+    {
+      "id": "model-pick",
+      "label": "Barograph Drum",
+      "kicker": "IMPECCABLE’S PICK",
+      "lineage": "clockwork barographs and chart recorders that ink a week onto a rotating drum while nobody watches",
+      "thesis": "Unattended time is the product, so the app is a recording instrument: a pen trace of heat, charge and uptime wrapped around a 7-day drum.",
+      "palette": ["#0F2A3A", "#E4ECEF", "#B8322A", "#7C8B93"],
+      "materials": ["printed chart grid", "ink pen trace", "brass drum rim", "engraved scale"],
+      "viewport": "The week's temperature trace across a gridded chart sheet, today's pen position live at the right edge, verdict engraved on the instrument plate above.",
+      "risk": "Closest to the charts-and-cards dashboard this category already ships; the most familiar card here."
+    },
+    {
+      "id": "challenger-cathode",
+      "label": "Cathode Numeral Stack",
+      "verdict": "competitive",
+      "lineage": "nixie-tube counters on a bench at 2am",
+      "thesis": "Every possible state hangs as an unlit ghost; the current one is struck forward in cathode orange.",
+      "palette": ["#0B1020", "#FF7A1A", "#6B5A3A", "#E8E2D6"],
+      "materials": ["bronze anode gauze", "glass depth", "cathode glow"],
+      "viewport": "Thermal state NONE to SHUTDOWN stacked as ghosts with the live one struck; battery temperature as a glowing numeral stack.",
+      "case": "Homelab and maker audiences love nixie clocks (holds audience); a strict two-hue orange world cannot carry red/amber/green severity, so it loses on clarity.",
+      "risk": "Sits in the near-black-plus-one-glow cluster most AI UIs land in.",
+      "hero": "https://impeccable.style/worlds/cards/operate-b-struck-cathode-gauze-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/operate-b-struck-cathode-gauze.webp"
+    },
+    {
+      "id": "challenger-elbow-console",
+      "label": "Starship Wall Panel",
+      "verdict": "competitive",
+      "lineage": "pill-cornered starship console panels",
+      "thesis": "The phone as a ship's engineering station: elbows frame banks of systems, red alert is a first-class state.",
+      "palette": ["#000000", "#C9A0DC", "#FFB38A", "#F2C94C", "#8FA8E0"],
+      "materials": ["flat pastel blocks", "thick elbows", "numeric code clusters"],
+      "viewport": "A lilac elbow sweeps down the left edge, pill segments per system, the verdict as a full-width alert bar.",
+      "case": "Self-hosters already theme dashboards like this (holds audience); numeric codes as labels and pastel semantics blur status (loses clarity).",
+      "risk": "Pop-culture pastiche that dates fast and borrows someone else's identity.",
+      "hero": "https://impeccable.style/worlds/cards/pop-culture-shelf-elbow-panel-console-hero.webp",
+      "board": "https://impeccable.style/worlds/cards/pop-culture-shelf-elbow-panel-console.webp"
+    },
+    {"id": "challenger-festival-lineup", "label": "Festival Lineup Poster", "verdict": "declined", "lineage": "festival lineup sheets", "palette": ["#E0452C", "#111111"], "materials": ["one condensed face at eight sizes"], "case": "Clear hierarchy, but self-hosters don't see their server in a gig bill.", "kept": "Billing: severity carried by type size."},
+    {"id": "challenger-drum-step-row", "label": "Drum Machine Step Row", "verdict": "declined", "lineage": "early-80s rhythm machines", "palette": ["#2A2A2A", "#E0452C", "#F29A2E", "#F2D84C"], "materials": ["step keys", "chase light"], "case": "Playful, but steps and tempo are not how anyone reads uptime.", "kept": "One unbroken timeline with a chase marker for now."},
+    {"id": "challenger-cyclorama", "label": "Cyclorama Dawn", "verdict": "declined", "lineage": "theatre cyclorama lighting", "palette": ["#000000", "#1F3FBF", "#E07A9A", "#FFFFFF"], "materials": ["light bands"], "case": "Atmosphere without a task; hides numbers.", "kept": "Named phases, never colour alone."},
+    {"id": "challenger-alphabet-storm", "label": "Alphabet Storm", "verdict": "declined", "lineage": "surreal typographic worlds", "palette": ["#FFFFFF", "#111111", "#C0C4C8"], "materials": ["letters as weather"], "case": "Spectacle over scanning; wrong for a glance at a server.", "kept": "One statement per viewport."}
+  ],
+  "reroll": {"registers": ["safer", "bolder"]},
+  "canon": true,
+  "canonCard": {
+    "label": "The category standard",
+    "thesis": "A Material 3 device-care dashboard (Samsung Device care, Google's battery health screens), executed impeccably.",
+    "palette": ["#F7F9FC", "#1B1D21", "#3D6DE8"],
+    "materials": ["tonal surface cards", "circular score gauge", "navigation bar"],
+    "viewport": "A big circular health score, a row of tonal cards per subsystem, bottom navigation bar.",
+    "risk": "Indistinguishable from the phone's own Device care screen by design."
+  },
+  "steer": true
+}
