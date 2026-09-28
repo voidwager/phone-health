@@ -7,6 +7,7 @@
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
     <queries>
         <package android:name="com.termux" />
@@ -30,6 +31,8 @@
             android:name=".FullscreenTestActivity"
             android:exported="false"
             android:screenOrientation="portrait" />
+
+        <receiver android:name=".InstallReceiver" android:exported="false" />
 
         <service
             android:name=".SampleJob"

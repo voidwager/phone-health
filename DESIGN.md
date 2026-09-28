@@ -231,6 +231,9 @@ Two lines, 20 columns, frame 6dp inset to the glass, 12dp/10dp inset to the firs
 - **Anatomy:** LED + silkscreen label (14sp muted, single line) + chevron on top; 22sp tabular reading; footer with 13sp detail left and the state word right (CHECK in ink, FAULT in fault-text, 13sp silkscreen). OK prints no word.
 - **States:** tappable with a bounded ripple (white 20% in dark, black 13% in light). Open bay gets a 2dp touch-blue ring and a blue up-chevron; closed chevron is muted and points down.
 
+### Update bay
+Appears full width under the component grid only while a newer release exists; never a health state, so it carries no LED and no state word. A drawn 18dp touch-blue download icon (arrow into a tray, nav-icon stroke family) replaces the LED; silkscreen `UPDATE` label + chevron; 22sp tabular `installed → new`; 13sp detail `N MB · from GitHub · keeps your data`. Opening it adds a panel: the sentence `Version X is ready to install.` as heading, plain-text release notes, the last error in fault-text if any, one `INSTALL UPDATE` touch point (reads `DOWNLOADING… N%`, disabled, while fetching), and a note that Android confirms and data stays. The LCD announces it on line 2 as `UPDATE X READY` (first when healthy, last behind any faults). In Readings › Software an available update is a plain row, never a CHECK.
+
 ### Panel + row
 Silkscreen section label on the bezel, then an inset panel. Row: optional 12dp LED, 15sp label filling the line, right-aligned 15sp medium tabular value (muted when NA), and an 11sp state word under it for CHECK/FAULT.
 

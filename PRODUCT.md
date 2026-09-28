@@ -56,7 +56,12 @@ as a health failure, not a user preference.
 - Host: user-configurable ports probed on 127.0.0.1; 15-minute background sampling, 7 days kept.
 - Nine hardware self-tests (pixels, touch, keys, loudspeaker, earpiece, mic, vibration, torch,
   sensors).
-- Nothing leaves the device. No accounts, no network calls except the latency probe.
+- Nothing about the phone leaves the device. No accounts. Two network calls only: the latency probe,
+  and (on by default, disclosed in Readings › Software, switchable off) an update check that asks
+  api.github.com for the latest release at most every 6 h while the app is open.
+- In-place updates: every release is signed with one pinned key, so an update always installs over
+  the existing app and keeps its data; the app refuses an APK with a different signer, package, or a
+  version that isn't newer.
 - Per-sensor temperatures are usually hidden from apps by SELinux; the app must say so, not fake it.
 
 ## Brand Commitments
@@ -75,7 +80,7 @@ benchmarks exist; do not invent any.
 2. Honest about uncertainty: rough estimates and hidden sensors are labelled, never dressed up.
 3. Unattended time is the product: history and gaps while nobody watched matter more than now.
 4. Every warning says what to do next.
-5. Stay small: no dependencies, no network, no accounts.
+5. Stay small: no dependencies, no accounts, no network beyond the disclosed update check.
 
 ## Accessibility & Inclusion
 

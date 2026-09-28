@@ -246,6 +246,7 @@ public class MainActivity extends Activity {
         });
         render();
         main.postDelayed(tick, 2500);
+        if (Updater.due(prefs)) io.execute(() -> { Updater.check(prefs); main.post(this::render); });
     }
 
     @Override
@@ -442,6 +443,8 @@ public class MainActivity extends Activity {
             msgs.add("BATT " + fmtTempShort(b.tempC) + "C  " + b.level + "%");
             msgs.add("UP " + duration(SystemClock.elapsedRealtime()));
         }
+        Updater.Release upd = Updater.available(this, prefs);
+        if (upd != null) msgs.add(worst == null ? 0 : msgs.size(), "UPDATE " + upd.version + " READY");
         lcd.set(line1, msgs.get(lcdPhase % msgs.size()), worst != null);
         LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(-1, -2);
         ll.topMargin = ui.px(6);
@@ -470,6 +473,7 @@ public class MainActivity extends Activity {
         }
 
         if (open != null) serviceNote(open);
+        if (upd != null) updateBay(upd);
 
         LinearLayout act = ui.panel(content, "Last 7 days · hourly");
         LedMatrixView m = new LedMatrixView(this, ui);
@@ -534,6 +538,125 @@ public class MainActivity extends Activity {
             render();
         });
         return b;
+    }
+
+    // ---------------------------------------------------------------- in-place updates
+
+    /** Full-width bay that appears only while a newer release exists; opens to its notes + install. */
+    private void updateBay(Updater.Release r) {
+        boolean open = "update".equals(openBay);
+        LinearLayout b = new LinearLayout(this);
+        b.setOrientation(LinearLayout.VERTICAL);
+        b.setBackground(ui.pressable(ui.bayShape(open ? ui.touch : 0)));
+        b.setPadding(ui.px(12), ui.px(12), ui.px(8), ui.px(12));
+        LinearLayout top = new LinearLayout(this);
+        top.setGravity(Gravity.CENTER_VERTICAL);
+        BezelParts.NavIcon icon = new BezelParts.NavIcon(this, ui, BezelParts.NavIcon.UPDATE);
+        icon.setColor(ui.touch);
+        LinearLayout.LayoutParams il = new LinearLayout.LayoutParams(ui.px(18), ui.px(18));
+        il.rightMargin = ui.px(6);
+        top.addView(icon, il);
+        top.addView(ui.silk("Update", 14, ui.muted), new LinearLayout.LayoutParams(0, -2, 1f));
+        top.addView(new BezelParts.Chevron(this, ui, open), new LinearLayout.LayoutParams(ui.px(20), ui.px(20)));
+        b.addView(top);
+        TextView v = ui.reading(Updater.installedVersion(this) + "  →  " + r.version, 22, ui.ink);
+        v.setPadding(0, ui.px(10), 0, ui.px(4));
+        b.addView(v);
+        b.addView(ui.text(String.format(Locale.getDefault(), "%.1f MB · from GitHub · keeps your data", r.size / 1e6),
+                13, ui.muted, false));
+        b.setContentDescription("Update available, version " + r.version + (open ? ". Expanded" : ". Double-tap for details"));
+        b.setOnClickListener(x -> { openBay = open ? null : "update"; render(); });
+        LinearLayout.LayoutParams bl = new LinearLayout.LayoutParams(-1, -2);
+        bl.topMargin = ui.px(10);
+        content.addView(b, bl);
+        if (!open) return;
+
+        LinearLayout p = ui.panel(content, null);
+        ((LinearLayout.LayoutParams) p.getLayoutParams()).topMargin = ui.px(12);
+        TextView h = ui.text("Version " + r.version + " is ready to install.", 17, ui.ink, true);
+        h.setPadding(0, ui.px(10), 0, ui.px(2));
+        p.addView(h);
+        if (!r.notes.isEmpty()) ui.note(p, r.notes);
+        String err = prefs.getString("upd_err", null);
+        if (err != null && dlPct < 0) {
+            TextView e = ui.text("Last attempt: " + err + ".", 14, ui.badText, false);
+            e.setPadding(0, ui.px(4), 0, ui.px(4));
+            p.addView(e);
+        }
+        Button go = ui.button(p, dlPct >= 0 ? "Downloading… " + dlPct + "%" : "Install update", x -> installUpdate(r));
+        go.setEnabled(dlPct < 0);
+        go.setAlpha(dlPct < 0 ? 1f : 0.6f);
+        ui.note(p, "Android asks you to confirm, then replaces the app in place. History, test results and settings stay.");
+    }
+
+    private volatile int dlPct = -1;
+
+    private void installUpdate(Updater.Release r) {
+        if (!getPackageManager().canRequestPackageInstalls()) {
+            startActivity(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+            showSnack("Allow Phone Health to install updates, then tap Install update again.");
+            return;
+        }
+        dlPct = 0;
+        prefs.edit().remove("upd_err").apply();
+        render();
+        io.execute(() -> {
+            String err = null;
+            try {
+                java.io.File apk = Updater.download(this, r, pct -> {
+                    if (pct - dlPct >= 5 || pct == 100) { dlPct = pct; main.post(() -> { if (tab == STATUS) render(); }); }
+                });
+                err = Updater.verify(this, apk);
+                if (err == null) Updater.install(this, apk);
+            } catch (Exception e) {
+                err = e.getMessage() == null ? e.getClass().getSimpleName() : e.getMessage();
+            }
+            String fe = err;
+            main.post(() -> {
+                dlPct = -1;
+                if (fe != null) {
+                    SharedPreferences.Editor ed = prefs.edit().putString("upd_err", fe);
+                    // a release that turns out not to be newer would otherwise be offered forever
+                    if (fe.startsWith("the download isn't newer")) ed.remove("upd_ver").remove("upd_url");
+                    ed.apply();
+                    showSnack("Update not installed: " + fe + ".");
+                }
+                render();
+            });
+        });
+    }
+
+    private void softwarePanel() {
+        LinearLayout s = ui.panel(content, "Software");
+        String mine = Updater.installedVersion(this);
+        ui.row(s, "Installed version", mine, null);
+        Updater.Release r = Updater.available(this, prefs);
+        long at = prefs.getLong("upd_at", 0);
+        boolean on = Updater.enabled(prefs);
+        ui.row(s, "Latest on GitHub", !on ? "checks off" : r != null ? r.version + " available"
+                : prefs.getString("upd_ver", null) == null ? "not checked yet" : "up to date",
+                // an available update is news, not a health problem: no CHECK light for it
+                !on || r != null ? null : prefs.getString("upd_ver", null) == null ? Ui.S.NA : Ui.S.GOOD);
+        if (at > 0) ui.row(s, "Last checked", duration(Math.max(0, System.currentTimeMillis() - at)) + " ago", null);
+        ui.note(s, "Update checks ask api.github.com for the latest release of " + Updater.REPO + ", at most every "
+                + "6 hours and only while the app is open. Nothing about this phone is sent.");
+        if (on) ui.button(s, "Check now", x -> {
+            showSnack("Checking GitHub…");
+            io.execute(() -> {
+                String err = Updater.check(prefs);
+                main.post(() -> {
+                    Updater.Release nr = Updater.available(this, prefs);
+                    showSnack(err != null ? "Couldn't check: " + err + "." : nr != null
+                            ? "Version " + nr.version + " is available on the Status screen." : "You're on the latest version.");
+                    render();
+                });
+            });
+        });
+        ui.button(s, on ? "Turn update checks off" : "Turn update checks on", x -> {
+            prefs.edit().putBoolean("upd_on", !on).apply();
+            if (on) prefs.edit().remove("upd_ver").remove("upd_url").apply(); // hide any pending update bay
+            render();
+        });
     }
 
     private void serviceNote(Check c) {
@@ -677,6 +800,8 @@ public class MainActivity extends Activity {
         for (String x : s.cells) ui.row(cell, x.split(" {2}")[0], x.substring(x.indexOf("  ") + 2),
                 s.level < 0 ? Ui.S.NA : s.level >= 3 ? Ui.S.GOOD : s.level == 2 ? Ui.S.WARN : Ui.S.BAD);
         ui.note(cell, "Above -95 dBm is solid on LTE/5G. Below -110 dBm, the radio burns battery hunting for a tower.");
+
+        softwarePanel();
     }
 
     /**
