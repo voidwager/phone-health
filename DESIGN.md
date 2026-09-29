@@ -237,6 +237,8 @@ Appears full width under the component grid only while a newer release exists; n
 ### Panel + row
 Silkscreen section label on the bezel, then an inset panel. Row: optional 12dp LED, 15sp label filling the line, right-aligned 15sp medium tabular value (muted when NA), and an 11sp state word under it for CHECK/FAULT.
 
+**Explainable rows.** Every row with an entry in `Explain.java` ends in a 20dp chevron and a bounded ripple; tapping expands it in place (the open set survives the 2.5s re-render and rotation). The expansion, indented to the label when the row has an LED: a 14sp muted what-it-is sentence; then up to three bands, each an LED of that state + 13sp silkscreen `GOOD` / `AVERAGE` / `BAD` (72dp column, BAD in fault-text) + 14sp range; then `You: <value> → good|average|bad.` in medium ink, or `Guide only…` / `Not graded right now.` in muted. Ranges are copied from the grading thresholds, never written independently. An opened bay's note uses the same block between its cause heading and a `WHAT TO DO` label over the remedy.
+
 ### Buttons (touch points)
 - **Shape:** 6dp radius, 1.5dp touch-blue outline, transparent fill, 48dp tall, 16dp side padding.
 - **Label:** 15sp silkscreen caps in touch-blue.

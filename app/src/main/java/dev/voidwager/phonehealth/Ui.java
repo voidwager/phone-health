@@ -202,10 +202,74 @@ final class Ui {
         LinearLayout.LayoutParams rl = new LinearLayout.LayoutParams(-2, -2);
         rl.leftMargin = px(12);
         r.addView(right, rl);
+
+        // Rows that have an explanation open in place to say what they are and where good/average/bad start.
+        Explain.E e = onToggle == null ? null : Explain.of(label);
+        if (e == null) {
+            panel.addView(r);
+            return;
+        }
+        boolean open = openRows.contains(label);
+        LinearLayout.LayoutParams cl = new LinearLayout.LayoutParams(px(20), px(20));
+        cl.leftMargin = px(6);
+        r.addView(new BezelParts.Chevron(c, this, open), cl);
+        r.setBackground(pressable(rounded(0, 4)));
+        r.setOnClickListener(x -> onToggle.accept(label));
+        r.setContentDescription(label + ", " + value + (s != null && s != S.NA ? ", " + word(s) : "")
+                + (open ? ". Expanded" : ". Double-tap to explain"));
         panel.addView(r);
+        if (open) {
+            View ex = explainBody(e, s, value);
+            ex.setTag(ROW); // keeps the hairline before the next row
+            ex.setPadding(s != null ? px(24) : 0, 0, 0, px(12));
+            panel.addView(ex);
+        }
     }
 
     private static final Object ROW = new Object();
+
+    /** Rows currently expanded, keyed by label; owned by the activity so they survive re-renders. */
+    java.util.Set<String> openRows = new java.util.HashSet<>();
+    /** Called with a row's label when it's tapped; null disables explanations. */
+    java.util.function.Consumer<String> onToggle;
+
+    /** What a reading is, its good / average / bad ranges with their LEDs, and where this reading lands. */
+    LinearLayout explainBody(Explain.E e, S s, CharSequence value) {
+        LinearLayout box = new LinearLayout(c);
+        box.setOrientation(LinearLayout.VERTICAL);
+        TextView what = text(e.what, 14, muted, false);
+        what.setLineSpacing(0, 1.25f);
+        what.setPadding(0, 0, 0, px(8));
+        box.addView(what);
+        if (!e.graded()) return box;
+        String[] ranges = {e.good, e.avg, e.bad};
+        S[] states = {S.GOOD, S.WARN, S.BAD};
+        for (int i = 0; i < 3; i++) {
+            if (ranges[i] == null) continue;
+            LinearLayout band = new LinearLayout(c);
+            band.setGravity(Gravity.CENTER_VERTICAL);
+            band.setPadding(0, px(4), 0, px(4));
+            LedView led = new LedView(c, this);
+            led.set(states[i]);
+            LinearLayout.LayoutParams ll = new LinearLayout.LayoutParams(px(10), px(10));
+            ll.rightMargin = px(8);
+            band.addView(led, ll);
+            band.addView(silk(Explain.band(states[i]), 13, states[i] == S.BAD ? badText : ink),
+                    new LinearLayout.LayoutParams(px(72), -2));
+            TextView range = text(ranges[i], 14, ink, false);
+            range.setLineSpacing(0, 1.15f);
+            band.addView(range, new LinearLayout.LayoutParams(0, -2, 1f));
+            box.addView(band);
+        }
+        String yours = s == null ? "Guide only: this reading isn't graded."
+                : s == S.NA ? "Not graded right now."
+                : "You: " + value + " → " + Explain.band(s) + ".";
+        TextView y = text(yours, 14, s == null || s == S.NA ? muted : ink, s != null && s != S.NA);
+        y.setFontFeatureSettings("tnum");
+        y.setPadding(0, px(8), 0, 0);
+        box.addView(y);
+        return box;
+    }
 
     void note(LinearLayout panel, CharSequence s) {
         TextView t = text(s, 14, muted, false);

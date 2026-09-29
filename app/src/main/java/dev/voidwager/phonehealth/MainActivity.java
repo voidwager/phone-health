@@ -116,7 +116,10 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         ui = new Ui(this);
         prefs = getSharedPreferences(PREFS, 0);
+        ui.onToggle = key -> { if (!ui.openRows.remove(key)) ui.openRows.add(key); render(); };
         if (b != null) {
+            java.util.ArrayList<String> rows = b.getStringArrayList("rows");
+            if (rows != null) ui.openRows.addAll(rows);
             tab = b.getInt("tab", STATUS);
             openBay = b.getString("bay");
         }
@@ -229,6 +232,7 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(out);
         out.putInt("tab", tab);
         out.putString("bay", openBay);
+        out.putStringArrayList("rows", new java.util.ArrayList<>(ui.openRows));
     }
 
     @Override
@@ -676,6 +680,15 @@ public class MainActivity extends Activity {
         cause.setLineSpacing(0, 1.2f);
         head.addView(cause, new LinearLayout.LayoutParams(0, -2, 1f));
         p.addView(head);
+        Explain.E e = Explain.of("bay:" + c.id);
+        if (e != null) {
+            LinearLayout ex = ui.explainBody(e, c.s, c.reading);
+            ex.setPadding(0, ui.px(8), 0, ui.px(4));
+            p.addView(ex);
+        }
+        TextView fix = ui.silk("What to do", 12, ui.muted);
+        fix.setPadding(0, ui.px(12), 0, 0);
+        p.addView(fix);
         ui.note(p, c.remedy);
         ui.button(p, c.target == HISTORY ? "Open history" : "Open readings", x -> switchTab(c.target));
     }
